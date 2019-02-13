@@ -25,3 +25,29 @@
 	<atomic>
 	<stdlib.h>
 
+1550075023 source:c:\users\lenovo\desktop\repos\chat\main.cpp
+	<iostream>
+	<stdio.h>
+	<Windows.h>
+	<Winsock.h>
+	<Winsock2.h>
+	<Ws2tcpip.h>
+	<fcntl.h>
+	<sys/socket.h>
+	<sys/types.h>
+	<sys/select.h>
+	<arpa/inet.h>
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<unistd.h>
+	<iostream>
+	<stdio.h>
+	<Windows.h>
+	<Winsock.h>
+	<Winsock2.h>
+	<Ws2tcpip.h>
+	<thread>
+	<atomic>
+	<stdlib.h>
+
