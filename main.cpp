@@ -56,27 +56,34 @@ void cls( )
 }
 
 //For listenForServerOutput thread [clientSide]
-atomic<int> threadStatus;
+atomic<bool> threadStatus;
 
-void listenForServerOutput(int socket) {
+void listenForServerOutput(int socket, fd_set read_set) {
 
+    int maxfd = 0;
+    char buffer[BUFFLEN];
 
+    while(threadStatus == true) {
+        FD_ZERO(&read_set);
 
-
-
-
-        FD_SET(l_socket, &read_set);
-        if (l_socket > maxfd){
-            maxfd = l_socket;
+        FD_SET(socket, &read_set);
+        if (socket > maxfd){
+            maxfd = socket;
         }
 
         select(maxfd+1, &read_set, NULL , NULL, NULL);
 
+        FD_ZERO(&read_set);
+        FD_SET(socket, &read_set);
+        if (FD_ISSET(socket, &read_set)){
+                   memset(&buffer,0,BUFFLEN);
+            int r_len = recv(socket,(char*) &buffer,BUFFLEN,0); //Pridejau (char*)
 
-
-
-
-
+            if(r_len > 0) {
+                cout << buffer << endl;
+            }
+        }
+    }
 }
 
 int clientSide() {
@@ -179,10 +186,14 @@ int clientSide() {
         return -1;
     }
     */
+
+
+
+
     //Klausomasi serverio nurodymu
+    threadStatus = true;
 
-
-    thread listeningForServer(listenForServerOutput, s_socket, &read_set);
+    thread listeningForServer(listenForServerOutput, s_socket, read_set);
 
     string command = "";
     bool done = false;
@@ -197,11 +208,13 @@ int clientSide() {
 
             if(s_len == -1) {
                 cout << "Server is unreachable!" << endl;
+                threadStatus = false;
                 listeningForServer.join();
                 done = true;
             }
         } else {
             done = true;
+            threadStatus = false;
             listeningForServer.join();
         }
     }
