@@ -60,10 +60,9 @@ void cls( )
 }
 
 int clientSide() {
-
-
     unsigned int port = PORT;
     int s_socket;
+    int l_socket;
     struct sockaddr_in servaddr; // Serverio adreso struktûra
     fd_set read_set;
 
@@ -71,14 +70,11 @@ int clientSide() {
     char sendbuffer[BUFFLEN];
 
     string ip_address;
+
+
     int iResult;
 
     WSADATA wsaData;   // if this doesn't work
-    //WSAData wsaData; // then try this instead
-
-    // MAKEWORD(1,1) for Winsock 1.1, MAKEWORD(2,0) for Winsock 2.0:
-
-
 
     // Initialize Winsock
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -87,10 +83,7 @@ int clientSide() {
         return 1;
     }
 
-
-
-
-    if ((s_socket = socket(AF_INET, SOCK_STREAM,0))< 0){
+    if ((l_socket = socket(AF_INET, SOCK_STREAM,0))< 0){
         fprintf(stderr,"ERROR #2: cannot create socket.\n");
         exit(1);
     }
@@ -104,8 +97,6 @@ int clientSide() {
     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     servaddr.sin_port = htons(port); // nurodomas portas
 
-
-/*
     unsigned long ulAddr = INADDR_NONE;
     ulAddr = inet_addr("127.0.0.1");
 
@@ -121,15 +112,108 @@ int clientSide() {
         return 1;
     }
 
-*/
-
-    if (connect(s_socket,(struct sockaddr*)&servaddr,sizeof(servaddr))<0){
+    if(connect(l_socket,(struct sockaddr*)&servaddr,sizeof(servaddr))<0){
         fprintf(stderr,"ERROR #4: error in connect().\n");
         exit(1);
     }
 
-    WSACleanup();
 
+
+
+
+
+    string command = "Testas";
+    char *cstr = new char[command.length() + 1];
+    strcpy(cstr, command.c_str());
+    int s_len = send(l_socket, cstr, strlen(cstr), 0);
+    delete [] cstr;
+
+    cout << s_len << endl;
+
+    cout << "Done sending..." << endl;
+
+
+
+
+
+
+
+
+
+    closesocket(l_socket);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+    memset(&servaddr,0, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(port);
+
+    if (bind (l_socket, (struct sockaddr *)&servaddr,sizeof(servaddr))<0){
+        fprintf(stderr,"\nERROR #3: bind listening socket.\n");
+        return -1;
+    }
+
+    if (listen(l_socket, 5) <0){
+        fprintf(stderr,"ERROR #4: error in listen().\n");
+        return -1;
+    }
+
+
+    atomic<bool> isOnline(true);
+
+    thread listenForInput([&isOnline, &l_socket] {
+        while(true) {
+            fd_set read_set;
+            char buffer[BUFFLEN];
+
+             select(NULL, &read_set, NULL , NULL, NULL);
+
+            if(FD_ISSET(l_socket, &read_set)) {
+                int r_len = recv(l_socket,(char*) &buffer,BUFFLEN,0);
+
+
+
+
+
+
+
+
+
+            }
+        }
+    });
+
+
+*/
+
+
+
+
+
+
+
+
+/*
     string command = "";
     bool done = false;
     while(!done) {
@@ -138,12 +222,33 @@ int clientSide() {
         if(command != "/leave" && command != "/quit" && command != "/q") {
             char *cstr = new char[command.length() + 1];
             strcpy(cstr, command.c_str());
-            send(s_socket, cstr, strlen(cstr), 0);
+            int s_len = send(s_socket, cstr, strlen(cstr), 0);
             delete [] cstr;
+
+            cout << s_len << endl;
         } else {
             done = true;
         }
     }
+*/
+
+/*
+    string command = "Testas";
+    char *cstr = new char[command.length() + 1];
+    strcpy(cstr, command.c_str());
+    int s_len = send(s_socket, cstr, strlen(cstr), 0);
+    delete [] cstr;
+
+    cout << s_len << endl;
+
+    cout << "Done sending..." << endl;
+
+
+    */
+
+
+
+
 
     return 0;
 }
@@ -186,11 +291,6 @@ int serverSide() {
     int iResult;
 
     WSADATA wsaData;   // if this doesn't work
-    //WSAData wsaData; // then try this instead
-
-    // MAKEWORD(1,1) for Winsock 1.1, MAKEWORD(2,0) for Winsock 2.0:
-
-
 
     // Initialize Winsock
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -225,25 +325,6 @@ int serverSide() {
 
     cout << "\nWaiting for connections...";
 
-
-
-
-/*
-    //Nera jokiu komandu ivesta dar
-    atomic<bool> hasCommand(false);
-    atomic<string> command;
-
-    thread listenForInput([&hasCommand, &command] {
-        string tmp;
-        cin >> tmp;
-        hasCommand = true;
-    });
-*/
-
-
-
-
-
     for (;;){
         FD_ZERO(&read_set);
         for (i = 0; i < MAXCLIENTS; i++){
@@ -273,6 +354,47 @@ int serverSide() {
             }
         }
 
+
+        for (i = 0; i < MAXCLIENTS; i++){
+            if (c_sockets[i] != -1){
+                if (FD_ISSET(c_sockets[i], &read_set)){
+                    memset(&buffer,0,BUFFLEN);
+                    int r_len = recv(c_sockets[i],(char*) &buffer,BUFFLEN,0); //Pridejau (char*)
+
+                    if(r_len > 0) {
+                       cout << buffer << endl;
+                    }
+                    //cout << r_len << endl;
+
+
+
+
+
+
+
+
+
+                    /*
+                    int j;
+                    for (j = 0; j < MAXCLIENTS; j++){
+                        if (c_sockets[j] != -1){
+                            int w_len = send(c_sockets[j], buffer, r_len,0);
+                            if (w_len <= 0){
+                                printf("Someone left the room.");
+
+
+                                closesocket(c_sockets[j]);
+                                c_sockets[j] = -1;
+                            }
+                        }
+                    }
+                    */
+                }
+            }
+        }
+
+
+        /*
         for (i = 0; i < MAXCLIENTS; i++){
             if (c_sockets[i] != -1){
                 if (FD_ISSET(c_sockets[i], &read_set)){
@@ -295,6 +417,7 @@ int serverSide() {
                 }
             }
         }
+        */
     }
 
 
@@ -349,5 +472,5 @@ int main()
         return 0;
     }
 
-    main();
+    //main();
 }
