@@ -423,15 +423,11 @@ int serverSide() {
 
                 printf("Connected:  %s\n",inet_ntoa(clientaddr.sin_addr));
 
-                //outputf = strcat("Connected: ", inet_ntoa(clientaddr.sin_addr));              //KLAIDA =======================
-                //strcpy(buffer, outputf.c_str());
+                outputf = "Connected: " + string(inet_ntoa(clientaddr.sin_addr));
+                strcpy(buffer, outputf.c_str());
                 for(int b = 0; b < MAXCLIENTS; b++) {
                     if(clients[b].socket != -1) {
-                        //int status = send(clients[b].socket, buffer, BUFFLEN, 0);
-
-
-
-
+                        send(clients[b].socket, buffer, BUFFLEN, 0);
                     }
                 }
             }
