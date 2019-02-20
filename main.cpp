@@ -39,7 +39,8 @@
 using namespace std;
 
 #define BUFFLEN 1024
-#define PORT 69
+#define SERVER_PORT 69
+#define CLIENT_PORT 70
 #define MAXCLIENTS 32
 
 
@@ -60,11 +61,13 @@ void cls( )
 }
 
 int clientSide() {
-    unsigned int port = PORT;
+    unsigned int port = SERVER_PORT;
     int s_socket;
     int l_socket;
     struct sockaddr_in servaddr; // Serverio adreso struktûra
     fd_set read_set;
+
+    int maxfd = 0;
 
     char recvbuffer[BUFFLEN];
     char sendbuffer[BUFFLEN];
@@ -118,9 +121,59 @@ int clientSide() {
     }
 
 
+
+
+
+
+
+
+
+
+    if ((l_socket = socket(AF_INET, SOCK_STREAM,0)) < 0){
+        fprintf(stderr, "ERROR #2: cannot create listening socket.\n");
+        return -1;
+    }
+
+    memset(&servaddr,0, sizeof(servaddr));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(CLIENT_PORT);
+
+    if (bind (l_socket, (struct sockaddr *)&servaddr,sizeof(servaddr))<0){
+        fprintf(stderr,"\nERROR #3: bind listening socket.\n");
+        return -1;
+    }
+
+    if (listen(l_socket, 5) <0){
+        fprintf(stderr,"ERROR #4: error in listen().\n");
+        return -1;
+    }
+
+
+
+
+
+
+
+
     string command = "";
     bool done = false;
     while(!done) {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         getline(cin, command);
 
         if(command != "/leave" && command != "/quit" && command != "/q") {
@@ -140,8 +193,26 @@ int clientSide() {
 
 
 
-    closesocket(s_socket);
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    closesocket(s_socket);
+     closesocket(l_socket);
 
 
 
@@ -217,10 +288,11 @@ int serverSide() {
     cls();
     cout << "Starting server...";
 
-    unsigned int port = PORT;
+    unsigned int port = SERVER_PORT;
     unsigned int clientaddrlen;
     int l_socket;
-    int c_sockets[MAXCLIENTS];
+    //int c_sockets[MAXCLIENTS];
+    Client clients[MAXCLIENTS];
     fd_set read_set;
 
     struct sockaddr_in servaddr;
@@ -263,18 +335,23 @@ int serverSide() {
     }
 
     for (i = 0; i < MAXCLIENTS; i++){
-        c_sockets[i] = -1;
+        clients[i].socket = -1;
     }
 
     cout << "\nWaiting for connections...";
 
+    int sockets[MAXCLIENTS];
+    for(int a = 0; a < MAXCLIENTS; a++) {
+        clients[a].socket = -1;
+    }
+
     for (;;){
         FD_ZERO(&read_set);
         for (i = 0; i < MAXCLIENTS; i++){
-            if (c_sockets[i] != -1){
-                FD_SET(c_sockets[i], &read_set);
-                if (c_sockets[i] > maxfd){
-                    maxfd = c_sockets[i];
+            if (clients[i].socket != -1){
+                FD_SET(clients[i].socket, &read_set);
+                if (clients[i].socket > maxfd){
+                    maxfd = clients[i].socket;
                 }
             }
         }
@@ -287,32 +364,34 @@ int serverSide() {
         select(maxfd+1, &read_set, NULL , NULL, NULL);
 
         if (FD_ISSET(l_socket, &read_set)){
-            int client_id = findemptyuser(c_sockets);
+
+            for(int a = 0; a < MAXCLIENTS; a++) {
+                sockets[a] = clients[a].socket;
+            }
+
+
+            int client_id = findemptyuser(sockets);
             if (client_id != -1){
                 clientaddrlen = sizeof(clientaddr);
                 memset(&clientaddr, 0, clientaddrlen);
-                c_sockets[client_id] = accept(l_socket,
-                    (struct sockaddr*)&clientaddr, (int*)&clientaddrlen);  //PRIDEJAU (int*)
+                clients[client_id].socket = accept(l_socket,
+                    (struct sockaddr*)&clientaddr, (int*)&clientaddrlen);
+                clients[client_id].ip = inet_ntoa(clientaddr.sin_addr);
+                clients[client_id].name = inet_ntoa(clientaddr.sin_addr);
                 printf("Connected:  %s\n",inet_ntoa(clientaddr.sin_addr));
             }
         }
 
 
         for (i = 0; i < MAXCLIENTS; i++){
-            if (c_sockets[i] != -1){
-                if (FD_ISSET(c_sockets[i], &read_set)){
+            if (clients[i].socket != -1){
+                if (FD_ISSET(clients[i].socket, &read_set)){
                     memset(&buffer,0,BUFFLEN);
-                    int r_len = recv(c_sockets[i],(char*) &buffer,BUFFLEN,0); //Pridejau (char*)
+                    int r_len = recv(clients[i].socket,(char*) &buffer,BUFFLEN,0); //Pridejau (char*)
 
                     if(r_len > 0) {
-                       cout << buffer << endl;
+                       cout << clients[i].name << ": " << buffer << endl;
                     }
-                    //cout << r_len << endl;
-
-
-
-
-
 
 
 
