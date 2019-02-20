@@ -83,7 +83,7 @@ int clientSide() {
         return 1;
     }
 
-    if ((l_socket = socket(AF_INET, SOCK_STREAM,0))< 0){
+    if ((s_socket = socket(AF_INET, SOCK_STREAM,0))< 0){
         fprintf(stderr,"ERROR #2: cannot create socket.\n");
         exit(1);
     }
@@ -112,32 +112,10 @@ int clientSide() {
         return 1;
     }
 
-    if(connect(l_socket,(struct sockaddr*)&servaddr,sizeof(servaddr))<0){
+    if(connect(s_socket,(struct sockaddr*)&servaddr,sizeof(servaddr))<0){
         fprintf(stderr,"ERROR #4: error in connect().\n");
         exit(1);
     }
-
-
-
-
-
-    /*
-    string command = "Testas";
-    char *cstr = new char[command.length() + 1];
-    strcpy(cstr, command.c_str());
-    int s_len = send(l_socket, cstr, strlen(cstr), 0);
-    delete [] cstr;
-
-    cout << s_len << endl;
-
-    cout << "Done sending..." << endl;
-    */
-
-
-
-
-
-
 
 
     string command = "";
@@ -148,11 +126,13 @@ int clientSide() {
         if(command != "/leave" && command != "/quit" && command != "/q") {
             char *cstr = new char[command.length() + 1];
             strcpy(cstr, command.c_str());
-            int s_len = send(l_socket, cstr, strlen(cstr), 0);
+            int s_len = send(s_socket, cstr, strlen(cstr), 0);
             delete [] cstr;
 
-            //cout << "Message: " << command << endl;
-            //cout << "Sent bytes: " << s_len << endl;
+            if(s_len == -1) {
+                cout << "Server is unreachable!" << endl;
+                done = true;
+            }
         } else {
             done = true;
         }
@@ -160,20 +140,7 @@ int clientSide() {
 
 
 
-
-
-
-
-    closesocket(l_socket);
-
-
-
-
-
-
-
-
-
+    closesocket(s_socket);
 
 
 
@@ -226,8 +193,6 @@ int clientSide() {
 
 
 */
-
-
     return 0;
 }
 
