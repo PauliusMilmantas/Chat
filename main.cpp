@@ -121,7 +121,7 @@ int clientSide() {
 
 
 
-
+    /*
     string command = "Testas";
     char *cstr = new char[command.length() + 1];
     strcpy(cstr, command.c_str());
@@ -131,8 +131,32 @@ int clientSide() {
     cout << s_len << endl;
 
     cout << "Done sending..." << endl;
+    */
 
 
+
+
+
+
+
+
+    string command = "";
+    bool done = false;
+    while(!done) {
+        getline(cin, command);
+
+        if(command != "/leave" && command != "/quit" && command != "/q") {
+            char *cstr = new char[command.length() + 1];
+            strcpy(cstr, command.c_str());
+            int s_len = send(l_socket, cstr, strlen(cstr), 0);
+            delete [] cstr;
+
+            //cout << "Message: " << command << endl;
+            //cout << "Sent bytes: " << s_len << endl;
+        } else {
+            done = true;
+        }
+    }
 
 
 
@@ -141,9 +165,6 @@ int clientSide() {
 
 
     closesocket(l_socket);
-
-
-
 
 
 
@@ -205,49 +226,6 @@ int clientSide() {
 
 
 */
-
-
-
-
-
-
-
-
-/*
-    string command = "";
-    bool done = false;
-    while(!done) {
-        cin >> command;
-
-        if(command != "/leave" && command != "/quit" && command != "/q") {
-            char *cstr = new char[command.length() + 1];
-            strcpy(cstr, command.c_str());
-            int s_len = send(s_socket, cstr, strlen(cstr), 0);
-            delete [] cstr;
-
-            cout << s_len << endl;
-        } else {
-            done = true;
-        }
-    }
-*/
-
-/*
-    string command = "Testas";
-    char *cstr = new char[command.length() + 1];
-    strcpy(cstr, command.c_str());
-    int s_len = send(s_socket, cstr, strlen(cstr), 0);
-    delete [] cstr;
-
-    cout << s_len << endl;
-
-    cout << "Done sending..." << endl;
-
-
-    */
-
-
-
 
 
     return 0;
