@@ -212,7 +212,7 @@ int clientSide() {
 
 
     closesocket(s_socket);
-     closesocket(l_socket);
+    closesocket(l_socket);
 
 
 
@@ -338,7 +338,7 @@ int serverSide() {
         clients[i].socket = -1;
     }
 
-    cout << "\nWaiting for connections...";
+    cout << "\nWaiting for connections..." << endl;
 
     int sockets[MAXCLIENTS];
     for(int a = 0; a < MAXCLIENTS; a++) {
@@ -441,21 +441,6 @@ int serverSide() {
         }
         */
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
