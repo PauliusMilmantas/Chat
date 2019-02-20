@@ -18,8 +18,6 @@
 #include <string.h>
 #include <unistd.h>
 #endif
-
-
 */
 
 
@@ -41,7 +39,6 @@ using namespace std;
 #define BUFFLEN 1024
 #define MAXCLIENTS 32
 
-
 void pos(short C, short R)
 {
     COORD xy ;
@@ -58,12 +55,20 @@ void cls( )
     pos(0,0);
 }
 
+//For listenForServerOutput thread [clientSide]
+
+
 void listenForServerOutput() {
-    cout << "test" << endl;
+
+
+
+
+
+
+
+
+
 }
-
-//For listenForServerOutput thread
-
 
 int clientSide() {
     int s_socket;
@@ -142,10 +147,10 @@ int clientSide() {
         exit(1);
     }
 
-    if ((l_socket = socket(AF_INET, SOCK_STREAM,0)) < 0){
+    /*if ((l_socket = socket(AF_INET, SOCK_STREAM,0)) < 0){
         fprintf(stderr, "ERROR #2: cannot create listening socket.\n");
         return -1;
-    }
+    }*/
 
     /*
     memset(&servaddr,0, sizeof(servaddr));
@@ -211,7 +216,6 @@ int clientSide() {
 
 
     closesocket(s_socket);
-    closesocket(l_socket);
 
 
 
