@@ -91,7 +91,6 @@ void listenForServerOutput(int socket, fd_set read_set) {
 
 int clientSide() {
     int s_socket;
-    //int l_socket;
     struct sockaddr_in servaddr; // Serverio adreso struktûra
     fd_set read_set;
 
@@ -118,16 +117,7 @@ int clientSide() {
         fprintf(stderr,"ERROR #2: cannot create socket.\n");
         exit(1);
     }
-/*
-    cout << "Enter client port: ";
-    int c_port;
-    cin >> c_port;
 
-    if ((c_port < 1) || (c_port > 65535)){
-        printf("ERROR #1: invalid port specified.\n");
-        exit(1);
-    }
-*/
     cout << "Enter server port: ";
     int s_port;
     cin >> s_port;
@@ -168,31 +158,6 @@ int clientSide() {
         exit(1);
     }
 
-    /*if ((l_socket = socket(AF_INET, SOCK_STREAM,0)) < 0){
-        fprintf(stderr, "ERROR #2: cannot create listening socket.\n");
-        return -1;
-    }*/
-
-    /*
-    memset(&servaddr,0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(c_port);
-
-    if (bind (l_socket, (struct sockaddr *)&servaddr,sizeof(servaddr))<0){
-        fprintf(stderr,"\nERROR #3: bind listening socket.\n");
-        return -1;
-    }
-
-    if (listen(l_socket, 5) <0){
-        fprintf(stderr,"ERROR #4: error in listen().\n");
-        return -1;
-    }
-    */
-
-
-
-
     //Klausomasi serverio nurodymu
     threadStatus = true;
 
@@ -222,78 +187,8 @@ int clientSide() {
         }
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     closesocket(s_socket);
 
-
-
-
-
-
-
-
-/*
-    memset(&servaddr,0, sizeof(servaddr));
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(port);
-
-    if (bind (l_socket, (struct sockaddr *)&servaddr,sizeof(servaddr))<0){
-        fprintf(stderr,"\nERROR #3: bind listening socket.\n");
-        return -1;
-    }
-
-    if (listen(l_socket, 5) <0){
-        fprintf(stderr,"ERROR #4: error in listen().\n");
-        return -1;
-    }
-
-
-    atomic<bool> isOnline(true);
-
-    thread listenForInput([&isOnline, &l_socket] {
-        while(true) {
-            fd_set read_set;
-            char buffer[BUFFLEN];
-
-             select(NULL, &read_set, NULL , NULL, NULL);
-
-            if(FD_ISSET(l_socket, &read_set)) {
-                int r_len = recv(l_socket,(char*) &buffer,BUFFLEN,0);
-
-
-
-
-
-
-
-
-
-            }
-        }
-    });
-
-
-*/
     return 0;
 }
 
@@ -329,10 +224,8 @@ int serverSide() {
     cls();
     cout << "Starting server...";
 
-    //unsigned int port = SERVER_PORT;
     unsigned int clientaddrlen;
     int l_socket;
-    //int c_sockets[MAXCLIENTS];
     Client clients[MAXCLIENTS];
     fd_set read_set;
 
@@ -452,59 +345,10 @@ int serverSide() {
                             }
                         }
                     }
-
-
-
-
-                    /*
-                    int j;
-                    for (j = 0; j < MAXCLIENTS; j++){
-                        if (c_sockets[j] != -1){
-                            int w_len = send(c_sockets[j], buffer, r_len,0);
-                            if (w_len <= 0){
-                                printf("Someone left the room.");
-
-
-                                closesocket(c_sockets[j]);
-                                c_sockets[j] = -1;
-                            }
-                        }
-                    }
-                    */
                 }
             }
         }
-
-
-        /*
-        for (i = 0; i < MAXCLIENTS; i++){
-            if (c_sockets[i] != -1){
-                if (FD_ISSET(c_sockets[i], &read_set)){
-                    memset(&buffer,0,BUFFLEN);
-                    int r_len = recv(c_sockets[i],(char*) &buffer,BUFFLEN,0); //Pridejau (char*)
-
-                    int j;
-                    for (j = 0; j < MAXCLIENTS; j++){
-                        if (c_sockets[j] != -1){
-                            int w_len = send(c_sockets[j], buffer, r_len,0);
-                            if (w_len <= 0){
-                                printf("Someone left the room.");
-
-
-                                closesocket(c_sockets[j]);
-                                c_sockets[j] = -1;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        */
     }
-
-
-
-
 
     return 0;
 }
