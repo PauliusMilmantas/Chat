@@ -439,11 +439,18 @@ int serverSide() {
             if (clients[i].socket != -1){
                 if (FD_ISSET(clients[i].socket, &read_set)){
                     memset(&buffer,0,BUFFLEN);
-                    int r_len = recv(clients[i].socket,(char*) &buffer,BUFFLEN,0); //Pridejau (char*)
+                    int r_len = recv(clients[i].socket,(char*) &buffer,BUFFLEN,0);
 
                     if(r_len > 0) {
                         outputf = clients[i].name + ": " + buffer;
                         cout << outputf << endl;
+                        strcpy(buffer, outputf.c_str());
+
+                        for(int a = 0; a < MAXCLIENTS; a++) {
+                            if(clients[a].socket != -1 && a != i) {
+                                send(clients[a].socket, buffer, BUFFLEN, 0);
+                            }
+                        }
                     }
 
 
@@ -507,8 +514,7 @@ void showMenu() {
     cout << "--------------------\n";
     cout << "[1]. Enter chat\n";
     cout << "[2]. Host chat\n";
-    cout << "[3]. Configurations\n";
-    cout << "[4]. Leave\n";
+    cout << "[3]. Leave\n";
     cout << "--------------------\n";
 }
 
@@ -525,8 +531,6 @@ int main()
         break;
     case 2:
         serverSide();
-        break;
-    case 3:
         break;
     default:
         return 0;
