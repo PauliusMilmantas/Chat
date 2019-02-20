@@ -56,12 +56,21 @@ void cls( )
 }
 
 //For listenForServerOutput thread [clientSide]
+atomic<int> threadStatus;
+
+void listenForServerOutput(int socket) {
 
 
-void listenForServerOutput() {
 
 
 
+
+        FD_SET(l_socket, &read_set);
+        if (l_socket > maxfd){
+            maxfd = l_socket;
+        }
+
+        select(maxfd+1, &read_set, NULL , NULL, NULL);
 
 
 
@@ -72,7 +81,7 @@ void listenForServerOutput() {
 
 int clientSide() {
     int s_socket;
-    int l_socket;
+    //int l_socket;
     struct sockaddr_in servaddr; // Serverio adreso struktûra
     fd_set read_set;
 
@@ -117,6 +126,8 @@ int clientSide() {
         printf("ERROR #1: invalid port specified.\n");
         exit(1);
     }
+
+    cls();
 
    /*
     * Iðvaloma ir uþpildoma serverio struktûra
@@ -171,7 +182,7 @@ int clientSide() {
     //Klausomasi serverio nurodymu
 
 
-    thread listeningForServer(listenForServerOutput);
+    thread listeningForServer(listenForServerOutput, s_socket, &read_set);
 
     string command = "";
     bool done = false;
