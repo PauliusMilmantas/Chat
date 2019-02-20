@@ -62,6 +62,7 @@ void listenForServerOutput(int socket, fd_set read_set) {
 
     int maxfd = 0;
     char buffer[BUFFLEN];
+    struct timeval tv;      //Neveikia timeout nustatymas
 
     while(threadStatus == true) {
         FD_ZERO(&read_set);
@@ -71,13 +72,15 @@ void listenForServerOutput(int socket, fd_set read_set) {
             maxfd = socket;
         }
 
-        select(maxfd+1, &read_set, NULL , NULL, NULL);
+        tv.tv_sec = 1;
+
+        select(maxfd+1, &read_set, NULL , NULL, &tv);
 
         FD_ZERO(&read_set);
         FD_SET(socket, &read_set);
         if (FD_ISSET(socket, &read_set)){
                    memset(&buffer,0,BUFFLEN);
-            int r_len = recv(socket,(char*) &buffer,BUFFLEN,0); //Pridejau (char*)
+            int r_len = recv(socket,(char*) &buffer,BUFFLEN,0);
 
             if(r_len > 0) {
                 cout << buffer << endl;
@@ -383,6 +386,7 @@ int serverSide() {
         clients[a].socket = -1;
     }
 
+    string outputf;
     for (;;){
         FD_ZERO(&read_set);
         for (i = 0; i < MAXCLIENTS; i++){
@@ -416,9 +420,23 @@ int serverSide() {
                     (struct sockaddr*)&clientaddr, (int*)&clientaddrlen);
                 clients[client_id].ip = inet_ntoa(clientaddr.sin_addr);
                 clients[client_id].name = inet_ntoa(clientaddr.sin_addr);
+
                 printf("Connected:  %s\n",inet_ntoa(clientaddr.sin_addr));
+
+                //outputf = strcat("Connected: ", inet_ntoa(clientaddr.sin_addr));              //KLAIDA =======================
+                //strcpy(buffer, outputf.c_str());
+                for(int b = 0; b < MAXCLIENTS; b++) {
+                    if(clients[b].socket != -1) {
+                        //int status = send(clients[b].socket, buffer, BUFFLEN, 0);
+
+
+
+
+                    }
+                }
             }
         }
+
 
 
         for (i = 0; i < MAXCLIENTS; i++){
@@ -428,7 +446,8 @@ int serverSide() {
                     int r_len = recv(clients[i].socket,(char*) &buffer,BUFFLEN,0); //Pridejau (char*)
 
                     if(r_len > 0) {
-                       cout << clients[i].name << ": " << buffer << endl;
+                        outputf = clients[i].name + ": " + buffer;
+                        cout << outputf << endl;
                     }
 
 
