@@ -39,8 +39,6 @@
 using namespace std;
 
 #define BUFFLEN 1024
-#define SERVER_PORT 69
-#define CLIENT_PORT 70
 #define MAXCLIENTS 32
 
 
@@ -60,8 +58,14 @@ void cls( )
     pos(0,0);
 }
 
+void listenForServerOutput() {
+    cout << "test" << endl;
+}
+
+//For listenForServerOutput thread
+
+
 int clientSide() {
-    unsigned int port = SERVER_PORT;
     int s_socket;
     int l_socket;
     struct sockaddr_in servaddr; // Serverio adreso struktûra
@@ -90,6 +94,24 @@ int clientSide() {
         fprintf(stderr,"ERROR #2: cannot create socket.\n");
         exit(1);
     }
+/*
+    cout << "Enter client port: ";
+    int c_port;
+    cin >> c_port;
+
+    if ((c_port < 1) || (c_port > 65535)){
+        printf("ERROR #1: invalid port specified.\n");
+        exit(1);
+    }
+*/
+    cout << "Enter server port: ";
+    int s_port;
+    cin >> s_port;
+
+    if ((s_port < 1) || (s_port > 65535)){
+        printf("ERROR #1: invalid port specified.\n");
+        exit(1);
+    }
 
    /*
     * Iðvaloma ir uþpildoma serverio struktûra
@@ -98,7 +120,7 @@ int clientSide() {
     memset(&servaddr,0,sizeof(servaddr));
     servaddr.sin_family = AF_INET; // nurodomas protokolas (IP)
     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    servaddr.sin_port = htons(port); // nurodomas portas
+    servaddr.sin_port = htons(s_port); // nurodomas portas
 
     unsigned long ulAddr = INADDR_NONE;
     ulAddr = inet_addr("127.0.0.1");
@@ -120,24 +142,16 @@ int clientSide() {
         exit(1);
     }
 
-
-
-
-
-
-
-
-
-
     if ((l_socket = socket(AF_INET, SOCK_STREAM,0)) < 0){
         fprintf(stderr, "ERROR #2: cannot create listening socket.\n");
         return -1;
     }
 
+    /*
     memset(&servaddr,0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(CLIENT_PORT);
+    servaddr.sin_port = htons(c_port);
 
     if (bind (l_socket, (struct sockaddr *)&servaddr,sizeof(servaddr))<0){
         fprintf(stderr,"\nERROR #3: bind listening socket.\n");
@@ -148,32 +162,15 @@ int clientSide() {
         fprintf(stderr,"ERROR #4: error in listen().\n");
         return -1;
     }
+    */
+    //Klausomasi serverio nurodymu
 
 
-
-
-
-
-
+    thread listeningForServer(listenForServerOutput);
 
     string command = "";
     bool done = false;
     while(!done) {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         getline(cin, command);
 
         if(command != "/leave" && command != "/quit" && command != "/q") {
@@ -184,10 +181,12 @@ int clientSide() {
 
             if(s_len == -1) {
                 cout << "Server is unreachable!" << endl;
+                listeningForServer.join();
                 done = true;
             }
         } else {
             done = true;
+            listeningForServer.join();
         }
     }
 
@@ -286,9 +285,20 @@ int serverSide() {
     };
 
     cls();
+
+    cout << "Enter server port: ";
+    int port;
+    cin >> port;
+
+    if ((port < 1) || (port > 65535)){
+        printf("ERROR #1: invalid port specified.\n");
+        exit(1);
+    }
+
+    cls();
     cout << "Starting server...";
 
-    unsigned int port = SERVER_PORT;
+    //unsigned int port = SERVER_PORT;
     unsigned int clientaddrlen;
     int l_socket;
     //int c_sockets[MAXCLIENTS];
