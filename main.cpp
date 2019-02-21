@@ -234,6 +234,7 @@ int clientSide() {
 
     int error = connect(s_socket,(struct sockaddr*)&servaddr,sizeof(servaddr));
     if(error<0){
+        error = WSAGetLastError();
         errorSwitch(error);
         exit(1);
     }
