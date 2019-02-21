@@ -55,6 +55,32 @@ void cls( )
     pos(0,0);
 }
 
+void errorSwitch(int error) {
+        switch(error) {
+        case 10091:
+            cout << "Network subsystem is unavailable" << endl;
+            break;
+        case 10092:
+            cout << "Winsock.dll version out of range" << endl;
+            break;
+        case 10093:
+            cout << "Successful WSAStartup not yet performed." << endl;
+            break;
+        case 10036:
+            cout << "Operation now in progress" << endl;
+            break;
+        case 10067:
+            cout << "Too many processes" << endl;
+            break;
+        case 10014:
+            cout << "Bad address" << endl;
+            break;
+        default:
+            cout << "Error initialising windowns socket" << endl;
+            break;
+        }
+}
+
 //For listenForServerOutput thread [clientSide]
 atomic<bool> threadStatus;
 
@@ -96,7 +122,7 @@ void listenForServerOutput(int socket, fd_set read_set) {
                 cout << "A component of timeout is outside the acceptable range." << endl;
                 break;
             default:
-                    cout << "Unknown select error in client side." << endl;
+                cout << "Unknown select error in client side." << endl;
                 break;
             }
         }
@@ -114,8 +140,8 @@ void listenForServerOutput(int socket, fd_set read_set) {
                 //Jeigu ivyko klaida gaunant
                 int klaida = WSAGetLastError();
 
-
-
+                errorSwitch(klaida);
+                threadStatus = false;
             }
 
             if(r_len > 0) {
@@ -146,7 +172,8 @@ int clientSide() {
     // Initialize Winsock
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (iResult != 0) {
-        printf("WSAStartup failed: %d\n", iResult);
+        errorSwitch(iResult);
+
         return 1;
     }
 
