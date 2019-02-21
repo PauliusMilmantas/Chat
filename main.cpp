@@ -65,22 +65,58 @@ void listenForServerOutput(int socket, fd_set read_set) {
     struct timeval tv;      //Neveikia timeout nustatymas
 
     while(threadStatus == true) {
+		//Nustatoma 0 bitu visiems FD
         FD_ZERO(&read_set);
 
+		//Nustatomi socket bitai
         FD_SET(socket, &read_set);
         if (socket > maxfd){
             maxfd = socket;
         }
 
         tv.tv_sec = 1;
+        tv.tv_usec = 0;
 
-        select(maxfd+1, &read_set, NULL , NULL, &tv);
+		//maxfd+1 Kiek fd(File descriptor) turi buti istestuota.
+		//read_set output'as select'o
+        int status = select(maxfd+1, &read_set, NULL , NULL, &tv);
+
+        //Tikrinama ar select nebuvo klaidos
+        if(status == 0) { //Baigesi laiko limitas
+            cout << "A signal interrupted the call or the time limit expired. " << endl;
+        } else if(status == -1) {
+            switch(errno) {
+            case 'EBADF':
+                    cout << "One or more of the file descriptor sets specified a file descriptor that is not a valid open file descriptor or specified a file descriptor that does not support selection. " << endl;
+                break;
+            case 'EISDIR':
+                cout << "One or more the file descriptor sets specified a file descriptor that refers to an open directory." << endl;
+                break;
+            case 'EINVAL':
+                cout << "A component of timeout is outside the acceptable range." << endl;
+                break;
+            default:
+                    cout << "Unknown select error in client side." << endl;
+                break;
+            }
+        }
 
         FD_ZERO(&read_set);
         FD_SET(socket, &read_set);
+
+        //Returns a non-zero value if the bit for the file descriptor (socket) is set in the file descriptor set pointed to by read_set, and 0 otherwise.
         if (FD_ISSET(socket, &read_set)){
-                   memset(&buffer,0,BUFFLEN);
+            memset(&buffer,0,BUFFLEN);
             int r_len = recv(socket,(char*) &buffer,BUFFLEN,0);
+
+            //Tikrinama ar ivyko klaida
+            if(r_len == 0 || r_len > 0) {
+                //Jeigu ivyko klaida gaunant
+                int klaida = WSAGetLastError();
+
+
+
+            }
 
             if(r_len > 0) {
                 cout << buffer << endl;
@@ -104,6 +140,7 @@ int clientSide() {
 
     int iResult;
 
+    //swaData laiko informacija apie windows socketu implementacija
     WSADATA wsaData;   // if this doesn't work
 
     // Initialize Winsock
@@ -334,17 +371,27 @@ int serverSide() {
                     memset(&buffer,0,BUFFLEN);
                     int r_len = recv(clients[i].socket,(char*) &buffer,BUFFLEN,0);
 
-                    if(r_len > 0) {
-                        outputf = clients[i].name + ": " + buffer;
-                        cout << outputf << endl;
-                        strcpy(buffer, outputf.c_str());
+                    if(r_len > 0) {//==========================================================
+                        char buffer2[5];
 
-                        for(int a = 0; a < MAXCLIENTS; a++) {
-                            if(clients[a].socket != -1 && a != i) {
-                                send(clients[a].socket, buffer, BUFFLEN, 0);
+                        for(int p = 0; p < 5; p++) {
+                            buffer2[p] = buffer[p];
+                        }
+
+                        if(buffer2 == "/name") {
+                            cout << "Changing name..." << endl;
+                        } else {
+                            outputf = clients[i].name + ": " + buffer;
+                            cout << outputf << endl;
+                            strcpy(buffer, outputf.c_str());
+
+                            for(int a = 0; a < MAXCLIENTS; a++) {
+                                if(clients[a].socket != -1 && a != i) {
+                                    send(clients[a].socket, buffer, BUFFLEN, 0);
+                                }
                             }
                         }
-                    }
+                   }
                 }
             }
         }
