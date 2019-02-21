@@ -85,6 +85,12 @@ void errorSwitch(int error) {
             case 10014:
                 cout << "Bad address" << endl;
                 break;
+            case 10047:
+                cout << "Address family not supported by protocol family." << endl;
+                break;
+            case 10061:
+                cout << "Connection refused." << endl;
+                break;
             default:
                 cout << "Error occured: " << error << endl;
                 break;
@@ -211,7 +217,6 @@ int clientSide() {
     servaddr.sin_family = AF_INET; // nurodomas protokolas (IP)
     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     servaddr.sin_port = htons(s_port); // nurodomas portas
-
     unsigned long ulAddr = INADDR_NONE;
     ulAddr = inet_addr("127.0.0.1");
 
@@ -227,8 +232,9 @@ int clientSide() {
         return 1;
     }
 
-    if(connect(s_socket,(struct sockaddr*)&servaddr,sizeof(servaddr))<0){
-        fprintf(stderr,"ERROR #4: error in connect().\n");
+    int error = connect(s_socket,(struct sockaddr*)&servaddr,sizeof(servaddr));
+    if(error<0){
+        errorSwitch(error);
         exit(1);
     }
 
