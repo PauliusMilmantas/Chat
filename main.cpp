@@ -56,29 +56,40 @@ void cls( )
 }
 
 void errorSwitch(int error) {
+    if(error != 0) {
         switch(error) {
-        case 10091:
-            cout << "Network subsystem is unavailable" << endl;
-            break;
-        case 10092:
-            cout << "Winsock.dll version out of range" << endl;
-            break;
-        case 10093:
-            cout << "Successful WSAStartup not yet performed." << endl;
-            break;
-        case 10036:
-            cout << "Operation now in progress" << endl;
-            break;
-        case 10067:
-            cout << "Too many processes" << endl;
-            break;
-        case 10014:
-            cout << "Bad address" << endl;
-            break;
-        default:
-            cout << "Error initialising windowns socket" << endl;
-            break;
+            case 10091:
+                cout << "Network subsystem is unavailable" << endl;
+                break;
+            case 10092:
+                cout << "Winsock.dll version out of range" << endl;
+                break;
+            case 10050:
+                cout << "Network is down." << endl;
+                break;
+            case 10051:
+                cout << "Network is unreachable" << endl;
+                break;
+            case 10052:
+                cout << "Network dropped connection on reset." << endl;
+                break;
+            case 10093:
+                cout << "Successful WSAStartup not yet performed." << endl;
+                break;
+            case 10036:
+                cout << "Operation now in progress" << endl;
+                break;
+            case 10067:
+                cout << "Too many processes" << endl;
+                break;
+            case 10014:
+                cout << "Bad address" << endl;
+                break;
+            default:
+                cout << "Error occured: " << error << endl;
+                break;
         }
+    }
 }
 
 //For listenForServerOutput thread [clientSide]
@@ -162,7 +173,6 @@ int clientSide() {
     char sendbuffer[BUFFLEN];
 
     string ip_address;
-
 
     int iResult;
 
