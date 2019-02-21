@@ -91,6 +91,12 @@ void errorSwitch(int error) {
             case 10061:
                 cout << "Connection refused." << endl;
                 break;
+            case 10054:
+                cout << "Connection reset by peer." << endl;
+                break;
+            case 10050:
+                cout << "Network is down." << endl;
+                break;
             default:
                 cout << "Error occured: " << error << endl;
                 break;
@@ -193,8 +199,10 @@ int clientSide() {
         return 1;
     }
 
-    if ((s_socket = socket(AF_INET, SOCK_STREAM,0))< 0){
-        fprintf(stderr,"ERROR #2: cannot create socket.\n");
+    s_socket = socket(AF_INET, SOCK_STREAM,0);
+    if (s_socket< 0){
+        int error = WSAGetLastError();
+        errorSwitch(error);
         exit(1);
     }
 
@@ -203,7 +211,7 @@ int clientSide() {
     cin >> s_port;
 
     if ((s_port < 1) || (s_port > 65535)){
-        printf("ERROR #1: invalid port specified.\n");
+        printf("Invalid port specified.\n");
         exit(1);
     }
 
@@ -256,7 +264,9 @@ int clientSide() {
             delete [] cstr;
 
             if(s_len == -1) {
-                cout << "Server is unreachable!" << endl;
+                int error = WSAGetLastError();
+                errorSwitch(error);
+
                 threadStatus = false;
                 listeningForServer.join();
                 done = true;
@@ -268,7 +278,11 @@ int clientSide() {
         }
     }
 
-    closesocket(s_socket);
+    int err = closesocket(s_socket);
+    if(err != 0) {
+        err = WSAGetLastError();
+        errorSwitch(err);
+    }
 
     return 0;
 }
@@ -298,7 +312,7 @@ int serverSide() {
     cin >> port;
 
     if ((port < 1) || (port > 65535)){
-        printf("ERROR #1: invalid port specified.\n");
+        printf("Invalid port specified.\n");
         exit(1);
     }
 
