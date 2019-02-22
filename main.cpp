@@ -18,8 +18,6 @@
 #include <string.h>
 #include <unistd.h>
 #endif
-
-
 */
 
 
@@ -39,9 +37,7 @@
 using namespace std;
 
 #define BUFFLEN 1024
-#define PORT 69
 #define MAXCLIENTS 32
-
 
 void pos(short C, short R)
 {
@@ -59,41 +55,167 @@ void cls( )
     pos(0,0);
 }
 
+void errorSwitch(int error) {
+    if(error != 0) {
+        switch(error) {
+            case 10091:
+                cout << "Network subsystem is unavailable" << endl;
+                break;
+            case 10092:
+                cout << "Winsock.dll version out of range" << endl;
+                break;
+            case 10050:
+                cout << "Network is down." << endl;
+                break;
+            case 10051:
+                cout << "Network is unreachable" << endl;
+                break;
+            case 10052:
+                cout << "Network dropped connection on reset." << endl;
+                break;
+            case 10093:
+                cout << "Successful WSAStartup not yet performed." << endl;
+                break;
+            case 10036:
+                cout << "Operation now in progress" << endl;
+                break;
+            case 10067:
+                cout << "Too many processes" << endl;
+                break;
+            case 10014:
+                cout << "Bad address" << endl;
+                break;
+            case 10047:
+                cout << "Address family not supported by protocol family." << endl;
+                break;
+            case 10061:
+                cout << "Connection refused." << endl;
+                break;
+            case 10054:
+                cout << "Connection reset by peer." << endl;
+                break;
+            case 10050:
+                cout << "Network is down." << endl;
+                break;
+            default:
+                cout << "Error occured: " << error << endl;
+                break;
+        }
+    }
+}
+
+//For listenForServerOutput thread [clientSide]
+atomic<bool> threadStatus;
+
+void listenForServerOutput(int socket, fd_set read_set) {
+
+    int maxfd = 0;
+    char buffer[BUFFLEN];
+    struct timeval tv;      //Neveikia timeout nustatymas
+
+    while(threadStatus == true) {
+		//Nustatoma 0 bitu visiems FD
+        FD_ZERO(&read_set);
+
+		//Nustatomi socket bitai
+        FD_SET(socket, &read_set);
+        if (socket > maxfd){
+            maxfd = socket;
+        }
+
+        tv.tv_sec = 1;
+        tv.tv_usec = 0;
+
+		//maxfd+1 Kiek fd(File descriptor) turi buti istestuota.
+		//read_set output'as select'o
+        int status = select(maxfd+1, &read_set, NULL , NULL, &tv);
+
+        //Tikrinama ar select nebuvo klaidos
+        if(status == 0) { //Baigesi laiko limitas
+            cout << "A signal interrupted the call or the time limit expired. " << endl;
+        } else if(status == -1) {
+            switch(errno) {
+            case 'EBADF':
+                    cout << "One or more of the file descriptor sets specified a file descriptor that is not a valid open file descriptor or specified a file descriptor that does not support selection. " << endl;
+                break;
+            case 'EISDIR':
+                cout << "One or more the file descriptor sets specified a file descriptor that refers to an open directory." << endl;
+                break;
+            case 'EINVAL':
+                cout << "A component of timeout is outside the acceptable range." << endl;
+                break;
+            default:
+                cout << "Unknown select error in client side." << endl;
+                break;
+            }
+        }
+
+        FD_ZERO(&read_set);
+        FD_SET(socket, &read_set);
+
+        //Returns a non-zero value if the bit for the file descriptor (socket) is set in the file descriptor set pointed to by read_set, and 0 otherwise.
+        if (FD_ISSET(socket, &read_set)){
+            memset(&buffer,0,BUFFLEN);
+            int r_len = recv(socket,(char*) &buffer,BUFFLEN,0);
+
+            //Tikrinama ar ivyko klaida
+            if(r_len == 0 || r_len > 0) {
+                //Jeigu ivyko klaida gaunant
+                int klaida = WSAGetLastError();
+
+                errorSwitch(klaida);
+                threadStatus = false;
+            }
+
+            if(r_len > 0) {
+                cout << buffer << endl;
+            }
+        }
+    }
+}
+
 int clientSide() {
-
-
-    unsigned int port = PORT;
     int s_socket;
     struct sockaddr_in servaddr; // Serverio adreso struktûra
     fd_set read_set;
+
+    int maxfd = 0;
 
     char recvbuffer[BUFFLEN];
     char sendbuffer[BUFFLEN];
 
     string ip_address;
+
     int iResult;
 
+    //swaData laiko informacija apie windows socketu implementacija
     WSADATA wsaData;   // if this doesn't work
-    //WSAData wsaData; // then try this instead
-
-    // MAKEWORD(1,1) for Winsock 1.1, MAKEWORD(2,0) for Winsock 2.0:
-
-
 
     // Initialize Winsock
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (iResult != 0) {
-        printf("WSAStartup failed: %d\n", iResult);
+        errorSwitch(iResult);
+
         return 1;
     }
 
-
-
-
-    if ((s_socket = socket(AF_INET, SOCK_STREAM,0))< 0){
-        fprintf(stderr,"ERROR #2: cannot create socket.\n");
+    s_socket = socket(AF_INET, SOCK_STREAM,0);
+    if (s_socket< 0){
+        int error = WSAGetLastError();
+        errorSwitch(error);
         exit(1);
     }
+
+    cout << "Enter server port: ";
+    int s_port;
+    cin >> s_port;
+
+    if ((s_port < 1) || (s_port > 65535)){
+        printf("Invalid port specified.\n");
+        exit(1);
+    }
+
+    cls();
 
    /*
     * Iðvaloma ir uþpildoma serverio struktûra
@@ -102,10 +224,7 @@ int clientSide() {
     memset(&servaddr,0,sizeof(servaddr));
     servaddr.sin_family = AF_INET; // nurodomas protokolas (IP)
     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-    servaddr.sin_port = htons(port); // nurodomas portas
-
-
-/*
+    servaddr.sin_port = htons(s_port); // nurodomas portas
     unsigned long ulAddr = INADDR_NONE;
     ulAddr = inet_addr("127.0.0.1");
 
@@ -121,28 +240,48 @@ int clientSide() {
         return 1;
     }
 
-*/
-
-    if (connect(s_socket,(struct sockaddr*)&servaddr,sizeof(servaddr))<0){
-        fprintf(stderr,"ERROR #4: error in connect().\n");
+    int error = connect(s_socket,(struct sockaddr*)&servaddr,sizeof(servaddr));
+    if(error<0){
+        error = WSAGetLastError();
+        errorSwitch(error);
         exit(1);
     }
 
-    WSACleanup();
+    //Klausomasi serverio nurodymu
+    threadStatus = true;
+
+    thread listeningForServer(listenForServerOutput, s_socket, read_set);
 
     string command = "";
     bool done = false;
     while(!done) {
-        cin >> command;
+        getline(cin, command);
 
         if(command != "/leave" && command != "/quit" && command != "/q") {
             char *cstr = new char[command.length() + 1];
             strcpy(cstr, command.c_str());
-            send(s_socket, cstr, strlen(cstr), 0);
+            int s_len = send(s_socket, cstr, strlen(cstr), 0);
             delete [] cstr;
+
+            if(s_len == -1) {
+                int error = WSAGetLastError();
+                errorSwitch(error);
+
+                threadStatus = false;
+                listeningForServer.join();
+                done = true;
+            }
         } else {
             done = true;
+            threadStatus = false;
+            listeningForServer.join();
         }
+    }
+
+    int err = closesocket(s_socket);
+    if(err != 0) {
+        err = WSAGetLastError();
+        errorSwitch(err);
     }
 
     return 0;
@@ -167,12 +306,22 @@ int serverSide() {
     };
 
     cls();
+
+    cout << "Enter server port: ";
+    int port;
+    cin >> port;
+
+    if ((port < 1) || (port > 65535)){
+        printf("Invalid port specified.\n");
+        exit(1);
+    }
+
+    cls();
     cout << "Starting server...";
 
-    unsigned int port = PORT;
     unsigned int clientaddrlen;
     int l_socket;
-    int c_sockets[MAXCLIENTS];
+    Client clients[MAXCLIENTS];
     fd_set read_set;
 
     struct sockaddr_in servaddr;
@@ -186,11 +335,6 @@ int serverSide() {
     int iResult;
 
     WSADATA wsaData;   // if this doesn't work
-    //WSAData wsaData; // then try this instead
-
-    // MAKEWORD(1,1) for Winsock 1.1, MAKEWORD(2,0) for Winsock 2.0:
-
-
 
     // Initialize Winsock
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -220,37 +364,24 @@ int serverSide() {
     }
 
     for (i = 0; i < MAXCLIENTS; i++){
-        c_sockets[i] = -1;
+        clients[i].socket = -1;
     }
 
-    cout << "\nWaiting for connections...";
+    cout << "\nWaiting for connections..." << endl;
 
+    int sockets[MAXCLIENTS];
+    for(int a = 0; a < MAXCLIENTS; a++) {
+        clients[a].socket = -1;
+    }
 
-
-
-/*
-    //Nera jokiu komandu ivesta dar
-    atomic<bool> hasCommand(false);
-    atomic<string> command;
-
-    thread listenForInput([&hasCommand, &command] {
-        string tmp;
-        cin >> tmp;
-        hasCommand = true;
-    });
-*/
-
-
-
-
-
+    string outputf;
     for (;;){
         FD_ZERO(&read_set);
         for (i = 0; i < MAXCLIENTS; i++){
-            if (c_sockets[i] != -1){
-                FD_SET(c_sockets[i], &read_set);
-                if (c_sockets[i] > maxfd){
-                    maxfd = c_sockets[i];
+            if (clients[i].socket != -1){
+                FD_SET(clients[i].socket, &read_set);
+                if (clients[i].socket > maxfd){
+                    maxfd = clients[i].socket;
                 }
             }
         }
@@ -263,58 +394,66 @@ int serverSide() {
         select(maxfd+1, &read_set, NULL , NULL, NULL);
 
         if (FD_ISSET(l_socket, &read_set)){
-            int client_id = findemptyuser(c_sockets);
+
+            for(int a = 0; a < MAXCLIENTS; a++) {
+                sockets[a] = clients[a].socket;
+            }
+
+
+            int client_id = findemptyuser(sockets);
             if (client_id != -1){
                 clientaddrlen = sizeof(clientaddr);
                 memset(&clientaddr, 0, clientaddrlen);
-                c_sockets[client_id] = accept(l_socket,
-                    (struct sockaddr*)&clientaddr, (int*)&clientaddrlen);  //PRIDEJAU (int*)
+                clients[client_id].socket = accept(l_socket,
+                    (struct sockaddr*)&clientaddr, (int*)&clientaddrlen);
+                clients[client_id].ip = inet_ntoa(clientaddr.sin_addr);
+                clients[client_id].name = inet_ntoa(clientaddr.sin_addr);
+
                 printf("Connected:  %s\n",inet_ntoa(clientaddr.sin_addr));
-            }
-        }
 
-        for (i = 0; i < MAXCLIENTS; i++){
-            if (c_sockets[i] != -1){
-                if (FD_ISSET(c_sockets[i], &read_set)){
-                    memset(&buffer,0,BUFFLEN);
-                    int r_len = recv(c_sockets[i],(char*) &buffer,BUFFLEN,0); //Pridejau (char*)
-
-                    int j;
-                    for (j = 0; j < MAXCLIENTS; j++){
-                        if (c_sockets[j] != -1){
-                            int w_len = send(c_sockets[j], buffer, r_len,0);
-                            if (w_len <= 0){
-                                printf("Someone left the room.");
-
-
-                                closesocket(c_sockets[j]);
-                                c_sockets[j] = -1;
-                            }
-                        }
+                outputf = "Connected: " + string(inet_ntoa(clientaddr.sin_addr));
+                strcpy(buffer, outputf.c_str());
+                for(int b = 0; b < MAXCLIENTS; b++) {
+                    if(clients[b].socket != -1) {
+                        send(clients[b].socket, buffer, BUFFLEN, 0);
                     }
                 }
             }
         }
+
+
+
+        for (i = 0; i < MAXCLIENTS; i++){
+            if (clients[i].socket != -1){
+                if (FD_ISSET(clients[i].socket, &read_set)){
+                    memset(&buffer,0,BUFFLEN);
+                    int r_len = recv(clients[i].socket,(char*) &buffer,BUFFLEN,0);
+
+                    if(r_len > 0) {//==========================================================
+                        char buffer2[5];
+
+                        for(int p = 0; p < 5; p++) {
+                            buffer2[p] = buffer[p];
+                        }
+
+                        if(buffer2 == "/name") {
+                            cout << "Changing name..." << endl;
+                        } else {
+                            outputf = clients[i].name + ": " + buffer;
+                            cout << outputf << endl;
+                            strcpy(buffer, outputf.c_str());
+
+                            for(int a = 0; a < MAXCLIENTS; a++) {
+                                if(clients[a].socket != -1 && a != i) {
+                                    send(clients[a].socket, buffer, BUFFLEN, 0);
+                                }
+                            }
+                        }
+                   }
+                }
+            }
+        }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     return 0;
 }
@@ -324,8 +463,7 @@ void showMenu() {
     cout << "--------------------\n";
     cout << "[1]. Enter chat\n";
     cout << "[2]. Host chat\n";
-    cout << "[3]. Configurations\n";
-    cout << "[4]. Leave\n";
+    cout << "[3]. Leave\n";
     cout << "--------------------\n";
 }
 
@@ -343,11 +481,7 @@ int main()
     case 2:
         serverSide();
         break;
-    case 3:
-        break;
     default:
         return 0;
     }
-
-    main();
 }
