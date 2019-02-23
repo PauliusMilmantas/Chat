@@ -119,14 +119,9 @@ void listenForServerOutput(int socket, fd_set read_set) {
             maxfd = socket;
         }
 
-        static TIMEVAL tvv;
-        tvv.tv_sec = 2;
-
-        //select(maxfd+1, &read_set, NULL , NULL, &tvv);
-//int status = select(maxfd+1, &read_set, NULL , NULL, NULL);
 		//maxfd+1 Kiek fd(File descriptor) turi buti istestuota.
 		//read_set output'as select'o
-        int status = select(maxfd+1, &read_set, NULL , NULL, &tvv);
+        int status = select(maxfd+1, &read_set, NULL , NULL, NLL);
 
         //cout << "Updated.." << " " << threadStatus << endl;
 
