@@ -21,24 +21,43 @@
 */
 
 
+#if defined(WIN32)
 #pragma comment(lib, "Ws2_32.lib")
-
+#pragma comment(lib, "Wsock32.lib")
+#else
+#pragma comment(lib, "Pthread.lib")
+#endif
 
 #include <iostream>
 #include <stdio.h>
+#include <thread>
+#include <atomic>
+#include <string.h>
+#include <stdlib.h>
+
+#if defined(WIN32)
 #include <Windows.h>
 #include <Winsock.h>
 #include <Winsock2.h>
 #include <Ws2tcpip.h>
-#include <thread>
-#include <atomic>
-#include <stdlib.h>
+#else
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <sys/select.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <errno.h>
+#endif
+
 
 using namespace std;
 
 #define BUFFLEN 1024
 #define MAXCLIENTS 32
 
+#if defined(WIN32)
 void pos(short C, short R)
 {
     COORD xy ;
@@ -47,15 +66,22 @@ void pos(short C, short R)
     SetConsoleCursorPosition(
     GetStdHandle(STD_OUTPUT_HANDLE), xy);
 }
+#endif
 void cls( )
 {
+    #if defined(WIN32)
     pos(0,0);
     for(int j=0;j<100;j++)
     cout << string(100, ' ');
     pos(0,0);
+    #else
+    system("clear");
+    #endif
 }
 
+
 void errorSwitch(int error) {
+    #if defined(WIN32)
     if(error != 0) {
         switch(error) {
             case 10091:
@@ -99,6 +125,23 @@ void errorSwitch(int error) {
                 break;
         }
     }
+    #else
+        if(error != 0) {
+            switch(error) {
+                case 98:
+                    cout << "Address already in use" << endl;
+                    break;
+                case 111:
+                    cout << "Connection refused!" << endl;
+                    break;
+                default:
+                    cout << "Error occured: " << error << endl;
+                    break;
+            } 
+        } else {
+            cout << "Unknown error" << endl;
+        }
+    #endif
 }
 
 //For listenForServerOutput thread [clientSide]
@@ -121,12 +164,15 @@ void listenForServerOutput(int socket, fd_set read_set) {
 
 		//maxfd+1 Kiek fd(File descriptor) turi buti istestuota.
 		//read_set output'as select'o
-        int status = select(maxfd+1, &read_set, NULL , NULL, NLL);
-
-        //cout << "Updated.." << " " << threadStatus << endl;
+        int status = select(maxfd+1, &read_set, NULL , NULL, NULL);
 
         if(status < 0) {
+            #if defined(WIN32)
             int kl = WSAGetLastError();
+            #else
+            int kl = errno;
+            #endif
+
             errorSwitch(kl);
             threadStatus = false;
         } else if(status != 0) {
@@ -141,7 +187,11 @@ void listenForServerOutput(int socket, fd_set read_set) {
                 //Tikrinama ar ivyko klaida
                 if(r_len < 0) {
                     //Jeigu ivyko klaida gaunant
+                    #if defined(WIN32)
                     int klaida = WSAGetLastError();
+                    #else
+                    int klaida = errno;
+                    #endif
 
                     errorSwitch(klaida);
                     threadStatus = false;
@@ -159,7 +209,7 @@ void listenForServerOutput(int socket, fd_set read_set) {
 
 int clientSide() {
     int s_socket;
-    struct sockaddr_in servaddr; // Serverio adreso struktûra
+    struct sockaddr_in servaddr; // Serverio adreso struktï¿½ra
     fd_set read_set;
 
     int maxfd = 0;
@@ -169,6 +219,9 @@ int clientSide() {
 
     string ip_address;
 
+    cls();
+
+    #if defined(WIN32)
     int iResult;
 
     //swaData laiko informacija apie windows socketu implementacija
@@ -181,10 +234,16 @@ int clientSide() {
 
         return 1;
     }
+    #endif
 
     s_socket = socket(AF_INET, SOCK_STREAM,0);
     if (s_socket< 0){
-        int error = WSAGetLastError();
+            #if defined(WIN32)
+            int error = WSAGetLastError();
+            #else
+            int error = errno;
+            #endif
+
         errorSwitch(error);
         exit(1);
     }
@@ -201,7 +260,7 @@ int clientSide() {
     cls();
 
    /*
-    * Iðvaloma ir uþpildoma serverio struktûra
+    * Iï¿½valoma ir uï¿½pildoma serverio struktï¿½ra
     */
 
     memset(&servaddr,0,sizeof(servaddr));
@@ -213,19 +272,27 @@ int clientSide() {
 
     if (ulAddr == INADDR_NONE ) {
         printf("inet_addr failed and returned INADDR_NONE\n");
+        #if defined(WIN32)
         WSACleanup();
+        #endif
         return 1;
     }
 
     if (ulAddr == INADDR_ANY) {
         printf("inet_addr failed and returned INADDR_ANY\n");
+        #if defined(WIN32)
         WSACleanup();
+        #endif
         return 1;
     }
 
     int error = connect(s_socket,(struct sockaddr*)&servaddr,sizeof(servaddr));
     if(error<0){
+        #if defined(WIN32)
         error = WSAGetLastError();
+        #else
+        error = errno;
+        #endif
         errorSwitch(error);
         exit(1);
     }
@@ -247,7 +314,11 @@ int clientSide() {
             delete [] cstr;
 
             if(s_len == -1) {
+                #if defined(WIN32)
                 int error = WSAGetLastError();
+                #else
+                int error = errno;
+                #endif
                 errorSwitch(error);
 
                 threadStatus = false;
@@ -269,9 +340,17 @@ int clientSide() {
         }
     }
 
+    #if defined(WIN32)
     int err = closesocket(s_socket);
+    #else
+    int err = close(s_socket);
+    #endif
     if(err != 0) {
+        #if defined(WIN32)
         err = WSAGetLastError();
+        #else
+        err = errno;
+        #endif
         errorSwitch(err);
     }
 
@@ -308,7 +387,8 @@ int serverSide() {
     }
 
     cls();
-    cout << "Starting server...";
+
+    cout << "Starting server..."  << endl;
 
     unsigned int clientaddrlen;
     int l_socket;
@@ -323,6 +403,7 @@ int serverSide() {
 
     char buffer[BUFFLEN];
 
+    #if defined(WIN32)
     int iResult;
 
     WSADATA wsaData;   // if this doesn't work
@@ -333,9 +414,11 @@ int serverSide() {
         printf("WSAStartup failed: %d\n", iResult);
         return 1;
     }
+    #endif
 
     if ((l_socket = socket(AF_INET, SOCK_STREAM,0)) < 0){
-        fprintf(stderr, "ERROR #2: cannot create listening socket.\n");
+        errorSwitch(errno);        
+
         return -1;
     }
 
@@ -345,12 +428,14 @@ int serverSide() {
     servaddr.sin_port = htons(port);
 
     if (bind (l_socket, (struct sockaddr *)&servaddr,sizeof(servaddr))<0){
-        fprintf(stderr,"\nERROR #3: bind listening socket.\n");
+        errorSwitch(errno);  
+
         return -1;
     }
 
     if (listen(l_socket, 5) <0){
-        fprintf(stderr,"ERROR #4: error in listen().\n");
+        errorSwitch(errno);
+
         return -1;
     }
 
@@ -358,15 +443,16 @@ int serverSide() {
         clients[i].socket = -1;
     }
 
-    cout << "\nWaiting for connections..." << endl;
+    cout << "Waiting for connections..." << endl;
 
     int sockets[MAXCLIENTS];
     for(int a = 0; a < MAXCLIENTS; a++) {
         clients[a].socket = -1;
     }
 
+    int usersConnectedInTotal = 0;
     string outputf;
-    for (;;){
+    while(true){
         FD_ZERO(&read_set);
         for (i = 0; i < MAXCLIENTS; i++){
             if (clients[i].socket != -1){
@@ -382,13 +468,20 @@ int serverSide() {
             maxfd = l_socket;
         }
 
+        #if defined(WIN32)
         static TIMEVAL tv;
+        #else
+        static timeval tv;
+        #endif
         tv.tv_sec = 2;
 
-        select(maxfd+1, &read_set, NULL , NULL, &tv);
+        int rr = select(maxfd+1, &read_set, NULL , NULL, &tv);
+        if(rr < 0) {
+            errorSwitch(errno);
+            return 1;
+        }
 
         if (FD_ISSET(l_socket, &read_set)){
-
             for(int a = 0; a < MAXCLIENTS; a++) {
                 sockets[a] = clients[a].socket;
             }
@@ -397,18 +490,32 @@ int serverSide() {
             if (client_id != -1){
                 clientaddrlen = sizeof(clientaddr);
                 memset(&clientaddr, 0, clientaddrlen);
+                #if defined(WIN32)
                 clients[client_id].socket = accept(l_socket,
                     (struct sockaddr*)&clientaddr, (int*)&clientaddrlen);
+                #else
+                clients[client_id].socket = accept(l_socket,
+                    (struct sockaddr*)&clientaddr, &clientaddrlen);
+                #endif
+
                 clients[client_id].ip = inet_ntoa(clientaddr.sin_addr);
-                clients[client_id].name = inet_ntoa(clientaddr.sin_addr);
+                clients[client_id].name = "Guest_" + to_string(usersConnectedInTotal);
 
-                printf("Connected:  %s\n",inet_ntoa(clientaddr.sin_addr));
+                //For naming users
+                usersConnectedInTotal++;
 
-                outputf = "Connected: " + string(inet_ntoa(clientaddr.sin_addr));
-                strcpy(buffer, outputf.c_str());
+                string msg = clients[client_id].name + " connected from: " + string(inet_ntoa(clientaddr.sin_addr));
+                cout << msg << endl;
+
+                strcpy(buffer, msg.c_str());
                 for(int b = 0; b < MAXCLIENTS; b++) {
                     if(clients[b].socket != -1) {
-                        send(clients[b].socket, buffer, BUFFLEN, 0);
+                        int yy = send(clients[b].socket, buffer, BUFFLEN, 0);
+
+                        if(yy < 0) {
+                            errorSwitch(errno);
+                            return 1;
+                        }
                     }
                 }
             }
@@ -423,12 +530,33 @@ int serverSide() {
                     if(r_len > 0) {
                         if(buffer[0] == '&') {
                             outputf = clients[i].name + " has disconnected!";
+                            
+                            #if defined(WIN32)
+                            int rt = closesocket(clients[i].socket);
+                            #else
+                            int rt = close(clients[i].socket);
+                            #endif
+
+                            if(rt < 0) {
+                                #if defined(WIN32)
+                                errorSwitch(WSAGetLastError());
+                                #else
+                                errorSwitch(errno);
+                                #endif
+                            }
+
+                            clients[i].socket = -1;
                             cout << outputf << endl;
                             strcpy(buffer, outputf.c_str());
 
                             for(int a = 0; a < MAXCLIENTS; a++) {
                                 if(clients[a].socket != -1 && a != i) {
-                                    send(clients[a].socket, buffer, BUFFLEN, 0);
+                                    int yy = send(clients[a].socket, buffer, BUFFLEN, 0);
+
+                                    if(yy < 0) {
+                                        errorSwitch(errno);
+                                        return 1;
+                                    }
                                 }
                             }
                         } else {
@@ -438,10 +566,18 @@ int serverSide() {
 
                             for(int a = 0; a < MAXCLIENTS; a++) {
                                 if(clients[a].socket != -1 && a != i) {
-                                    send(clients[a].socket, buffer, BUFFLEN, 0);
+                                    int yy = send(clients[a].socket, buffer, BUFFLEN, 0);
+
+                                    if(yy < 0) {
+                                        errorSwitch(yy);
+                                        return 1;
+                                    }
                                 }
                             }
                         }
+                   } else if(r_len < 0) {
+                       errorSwitch(errno);
+                       return 1;
                    }
                 }
             }
@@ -458,12 +594,13 @@ int serverSide() {
                 if(st == 0) {
                     cout << clients[a].name << " has disconnected!" << endl;
                     clients[a].socket = -1;
+                } else if(st < 0) {
+                    errorSwitch(errno);
+                    return 1;
                 }
             }
         }
     }
-
-    return 0;
 }
 
 void showMenu() {
