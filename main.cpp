@@ -1,4 +1,4 @@
-//1.1
+//1.5
 #if defined(WIN32)
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Wsock32.lib")
@@ -114,6 +114,9 @@ void errorSwitch(int error) {
                 case 104:
                     cout << "Connection reset by peer" << endl;
                     break;
+                case 101:
+                    cout << "Network is unreachable" << endl;
+                    break;
                 case 111:
                     cout << "Connection refused!" << endl;
                     break;
@@ -197,8 +200,7 @@ int clientSide() {
 
     char recvbuffer[BUFFLEN];
     char sendbuffer[BUFFLEN];
-
-    string ip_address;
+    char server_ip[16];
 
     cls();
 
@@ -229,6 +231,9 @@ int clientSide() {
         exit(1);
     }
 
+    cout << "Enter ip address: ";
+    cin >> server_ip;
+
     cout << "Enter server port: ";
     int s_port;
     cin >> s_port;
@@ -246,10 +251,12 @@ int clientSide() {
 
     memset(&servaddr,0,sizeof(servaddr));
     servaddr.sin_family = AF_INET; // nurodomas protokolas (IP)
-    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    //servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    servaddr.sin_addr.s_addr = inet_addr(server_ip);
     servaddr.sin_port = htons(s_port); // nurodomas portas
     unsigned long ulAddr = INADDR_NONE;
-    ulAddr = inet_addr("127.0.0.1");
+    //ulAddr = inet_addr("127.0.0.1");
+    ulAddr = inet_addr(server_ip);
 
     if (ulAddr == INADDR_NONE ) {
         printf("inet_addr failed and returned INADDR_NONE\n");
