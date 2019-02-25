@@ -131,6 +131,9 @@ void errorSwitch(int error) {
                 case 98:
                     cout << "Address already in use" << endl;
                     break;
+                case 104:
+                    cout << "Connection reset by peer" << endl;
+                    break;
                 case 111:
                     cout << "Connection refused!" << endl;
                     break;
@@ -138,8 +141,6 @@ void errorSwitch(int error) {
                     cout << "Error occured: " << error << endl;
                     break;
             } 
-        } else {
-            cout << "Unknown error" << endl;
         }
     #endif
 }
