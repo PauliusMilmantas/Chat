@@ -313,7 +313,7 @@ int clientSide() {
             int s_len = send(s_socket, cstr, strlen(cstr), 0);
             delete [] cstr;
 
-            if(s_len == -1) {
+            if(s_len < 0) {
                 #if defined(WIN32)
                 int error = WSAGetLastError();
                 #else
@@ -326,7 +326,6 @@ int clientSide() {
                 done = true;
             }
         } else {
-
             done = true;
             threadStatus = false;
 
@@ -406,7 +405,7 @@ int serverSide() {
     #if defined(WIN32)
     int iResult;
 
-    WSADATA wsaData;   // if this doesn't work
+    WSADATA wsaData;
 
     // Initialize Winsock
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -527,6 +526,7 @@ int serverSide() {
                     memset(&buffer,0,BUFFLEN);
                     int r_len = recv(clients[i].socket,(char*) &buffer,BUFFLEN,0);
 
+                    string msg = string(buffer);
                     if(r_len > 0) {
                         if(buffer[0] == '&') {
                             outputf = clients[i].name + " has disconnected!";
@@ -559,6 +559,10 @@ int serverSide() {
                                     }
                                 }
                             }
+                        } else if(msg.substr(0, 5) == "/name") {
+                            string name = msg.substr(6, msg.length() - 6);
+                            
+                            clients[i].name = name;
                         } else {
                             outputf = clients[i].name + ": " + buffer;
                             cout << outputf << endl;
@@ -575,10 +579,10 @@ int serverSide() {
                                 }
                             }
                         }
-                   } else if(r_len < 0) {
+                    } else if(r_len < 0) {
                        errorSwitch(errno);
                        return 1;
-                   }
+                    }
                 }
             }
         }
@@ -593,6 +597,19 @@ int serverSide() {
 
                 if(st == 0) {
                     cout << clients[a].name << " has disconnected!" << endl;
+                    #if defined(WIN32)
+                    int st = closesocket(clients[a].socket);
+                    #else
+                    int st = close(clients[a].socket);
+                    #endif
+
+                    if(st < 0) {
+                        #if defined(WIN32)
+                        errorSwitch(WSAGetLastError());
+                        #else
+                        errorSwitch(st);
+                        #endif
+                    }
                     clients[a].socket = -1;
                 } else if(st < 0) {
                     errorSwitch(errno);
@@ -629,4 +646,6 @@ int main()
     default:
         return 0;
     }
+
+    return 0;
 }
