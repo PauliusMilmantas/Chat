@@ -1,3 +1,4 @@
+//1.1
 #if defined(WIN32)
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Wsock32.lib")
@@ -104,6 +105,9 @@ void errorSwitch(int error) {
     #else
         if(error != 0) {
             switch(error) {
+                case 13:
+                    cout << "Permission denied" << endl;
+                    break;
                 case 98:
                     cout << "Address already in use" << endl;
                     break;
