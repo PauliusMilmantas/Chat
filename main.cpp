@@ -1,26 +1,3 @@
-/*
-#if defined(WIN32)
-#include <iostream>
-#include <stdio.h>
-#include <Windows.h>
-#include <Winsock.h>
-#include <Winsock2.h>
-#include <Ws2tcpip.h>
-
-#else
-#include <fcntl.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/select.h>
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#endif
-*/
-
-
 #if defined(WIN32)
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Wsock32.lib")
@@ -50,7 +27,6 @@
 #include <sys/time.h>
 #include <errno.h>
 #endif
-
 
 using namespace std;
 
