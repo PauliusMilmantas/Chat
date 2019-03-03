@@ -1,4 +1,4 @@
-//1.5
+//1.6
 #if defined(WIN32)
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Wsock32.lib")
@@ -13,7 +13,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#if defined(WIN32)
+#if defined(WIN32) || defined(_WIN32)
 #include <Windows.h>
 #include <Winsock.h>
 #include <Winsock2.h>
@@ -46,7 +46,7 @@ void pos(short C, short R)
 #endif
 void cls( )
 {
-    #if defined(WIN32)
+    #if defined(WIN32) || defined(_WIN32)
     pos(0,0);
     for(int j=0;j<100;j++)
     cout << string(100, ' ');
@@ -58,7 +58,7 @@ void cls( )
 
 
 void errorSwitch(int error) {
-    #if defined(WIN32)
+    #if defined(WIN32) || defined(_WIN32)
     if(error != 0) {
         switch(error) {
             case 10091:
@@ -123,7 +123,7 @@ void errorSwitch(int error) {
                 default:
                     cout << "Error occured: " << error << endl;
                     break;
-            } 
+            }
         }
     #endif
 }
@@ -151,7 +151,7 @@ void listenForServerOutput(int socket, fd_set read_set) {
         int status = select(maxfd+1, &read_set, NULL , NULL, NULL);
 
         if(status < 0) {
-            #if defined(WIN32)
+            #if defined(WIN32) || defined(_WIN32)
             int kl = WSAGetLastError();
             #else
             int kl = errno;
@@ -171,7 +171,7 @@ void listenForServerOutput(int socket, fd_set read_set) {
                 //Tikrinama ar ivyko klaida
                 if(r_len < 0) {
                     //Jeigu ivyko klaida gaunant
-                    #if defined(WIN32)
+                    #if defined(WIN32) || defined(_WIN32)
                     int klaida = WSAGetLastError();
                     #else
                     int klaida = errno;
@@ -181,6 +181,7 @@ void listenForServerOutput(int socket, fd_set read_set) {
                     threadStatus = false;
                 }
 
+                //Jei tai serverio issiusta zinute tikrinimui
                 if(r_len > 0) {
                     if(buffer[0] != '[' && buffer[1] != ']'){
                         cout << buffer << endl;
@@ -204,11 +205,11 @@ int clientSide() {
 
     cls();
 
-    #if defined(WIN32)
+    #if defined(WIN32) || defined(_WIN32)
     int iResult;
 
     //swaData laiko informacija apie windows socketu implementacija
-    WSADATA wsaData;   // if this doesn't work
+    WSADATA wsaData;
 
     // Initialize Winsock
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -221,7 +222,7 @@ int clientSide() {
 
     s_socket = socket(AF_INET, SOCK_STREAM,0);
     if (s_socket< 0){
-            #if defined(WIN32)
+            #if defined(WIN32) || defined(_WIN32)
             int error = WSAGetLastError();
             #else
             int error = errno;
@@ -251,32 +252,42 @@ int clientSide() {
 
     memset(&servaddr,0,sizeof(servaddr));
     servaddr.sin_family = AF_INET; // nurodomas protokolas (IP)
-    //servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     servaddr.sin_addr.s_addr = inet_addr(server_ip);
     servaddr.sin_port = htons(s_port); // nurodomas portas
     unsigned long ulAddr = INADDR_NONE;
-    //ulAddr = inet_addr("127.0.0.1");
     ulAddr = inet_addr(server_ip);
 
     if (ulAddr == INADDR_NONE ) {
         printf("inet_addr failed and returned INADDR_NONE\n");
-        #if defined(WIN32)
-        WSACleanup();
+        #if defined(WIN32) || defined(_WIN32)
+
+        int gf = WSACleanup();
+
+        if(gf != 0) {
+            errorSwitch(WSAGetLastError());
+        }
+
         #endif
         return 1;
     }
 
     if (ulAddr == INADDR_ANY) {
         printf("inet_addr failed and returned INADDR_ANY\n");
-        #if defined(WIN32)
-        WSACleanup();
+        #if defined(WIN32) || defined(_WIN32)
+
+       int gf = WSACleanup();
+
+        if(gf != 0) {
+            errorSwitch(WSAGetLastError());
+        }
+
         #endif
         return 1;
     }
 
     int error = connect(s_socket,(struct sockaddr*)&servaddr,sizeof(servaddr));
     if(error<0){
-        #if defined(WIN32)
+        #if defined(WIN32) || defined(_WIN32)
         error = WSAGetLastError();
         #else
         error = errno;
@@ -302,7 +313,7 @@ int clientSide() {
             delete [] cstr;
 
             if(s_len < 0) {
-                #if defined(WIN32)
+                #if defined(WIN32) || defined(_WIN32)
                 int error = WSAGetLastError();
                 #else
                 int error = errno;
@@ -327,19 +338,29 @@ int clientSide() {
         }
     }
 
-    #if defined(WIN32)
+    #if defined(WIN32) || defined(_WIN32)
     int err = closesocket(s_socket);
     #else
     int err = close(s_socket);
     #endif
     if(err != 0) {
-        #if defined(WIN32)
+        #if defined(WIN32) || defined(_WIN32)
         err = WSAGetLastError();
         #else
         err = errno;
         #endif
         errorSwitch(err);
     }
+
+    #if defined(WIN32) || defined(_WIN32)
+
+    int gf = WSACleanup();
+
+    if(gf != 0) {
+       errorSwitch(WSAGetLastError());
+    }
+
+    #endif // defined
 
     return 0;
 }
@@ -390,7 +411,7 @@ int serverSide() {
 
     char buffer[BUFFLEN];
 
-    #if defined(WIN32)
+    #if defined(WIN32) || defined(_WIN32)
     int iResult;
 
     WSADATA wsaData;
@@ -404,7 +425,7 @@ int serverSide() {
     #endif
 
     if ((l_socket = socket(AF_INET, SOCK_STREAM,0)) < 0){
-        errorSwitch(errno);        
+        errorSwitch(errno);
 
         return -1;
     }
@@ -415,7 +436,7 @@ int serverSide() {
     servaddr.sin_port = htons(port);
 
     if (bind (l_socket, (struct sockaddr *)&servaddr,sizeof(servaddr))<0){
-        errorSwitch(errno);  
+        errorSwitch(errno);
 
         return -1;
     }
@@ -455,7 +476,7 @@ int serverSide() {
             maxfd = l_socket;
         }
 
-        #if defined(WIN32)
+        #if defined(WIN32) || defined(_WIN32)
         static TIMEVAL tv;
         #else
         static timeval tv;
@@ -477,7 +498,7 @@ int serverSide() {
             if (client_id != -1){
                 clientaddrlen = sizeof(clientaddr);
                 memset(&clientaddr, 0, clientaddrlen);
-                #if defined(WIN32)
+                #if defined(WIN32) || defined(_WIN32)
                 clients[client_id].socket = accept(l_socket,
                     (struct sockaddr*)&clientaddr, (int*)&clientaddrlen);
                 #else
@@ -518,15 +539,23 @@ int serverSide() {
                     if(r_len > 0) {
                         if(buffer[0] == '&') {
                             outputf = clients[i].name + " has disconnected!";
-                            
-                            #if defined(WIN32)
+
+                            #if defined(WIN32) || defined(_WIN32)
                             int rt = closesocket(clients[i].socket);
+
+                            /*
+                            int gf = WSACleanup();
+
+                            if(gf != 0) {
+                                errorSwitch(WSAGetLastError());
+                            }
+                            */
                             #else
                             int rt = close(clients[i].socket);
                             #endif
 
                             if(rt < 0) {
-                                #if defined(WIN32)
+                                #if defined(WIN32) || defined(_WIN32)
                                 errorSwitch(WSAGetLastError());
                                 #else
                                 errorSwitch(errno);
@@ -549,7 +578,7 @@ int serverSide() {
                             }
                         } else if(msg.substr(0, 5) == "/name") {
                             string name = msg.substr(6, msg.length() - 6);
-                            
+
                             clients[i].name = name;
                         } else {
                             outputf = clients[i].name + ": " + buffer;
@@ -585,14 +614,22 @@ int serverSide() {
 
                 if(st == 0) {
                     cout << clients[a].name << " has disconnected!" << endl;
-                    #if defined(WIN32)
+                    #if defined(WIN32) || defined(_WIN32)
                     int st = closesocket(clients[a].socket);
+
+                    /*
+                    int gf = WSACleanup();
+
+                    if(gf != 0) {
+                        errorSwitch(WSAGetLastError());
+                    }
+                    */
                     #else
                     int st = close(clients[a].socket);
                     #endif
 
                     if(st < 0) {
-                        #if defined(WIN32)
+                        #if defined(WIN32) || defined(_WIN32)
                         errorSwitch(WSAGetLastError());
                         #else
                         errorSwitch(st);

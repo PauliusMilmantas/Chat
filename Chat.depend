@@ -25,9 +25,13 @@
 	<atomic>
 	<stdlib.h>
 
-1550947723 source:c:\users\lenovo\desktop\repos\chat\main.cpp
+1551641275 source:c:\users\lenovo\desktop\repos\chat\main.cpp
 	<iostream>
 	<stdio.h>
+	<thread>
+	<atomic>
+	<string.h>
+	<stdlib.h>
 	<Windows.h>
 	<Winsock.h>
 	<Winsock2.h>
@@ -37,17 +41,7 @@
 	<sys/types.h>
 	<sys/select.h>
 	<arpa/inet.h>
-	<stdio.h>
-	<stdlib.h>
-	<string.h>
 	<unistd.h>
-	<iostream>
-	<stdio.h>
-	<Windows.h>
-	<Winsock.h>
-	<Winsock2.h>
-	<Ws2tcpip.h>
-	<thread>
-	<atomic>
-	<stdlib.h>
+	<sys/time.h>
+	<errno.h>
 
