@@ -1,4 +1,4 @@
-//1.7
+//1.8
 #if defined(WIN32) || defined(_WIN32)
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Wsock32.lib")
@@ -108,6 +108,9 @@ void errorSwitch(int error) {
                 case 13:
                     cout << "Permission denied" << endl;
                     break;
+                case 22:
+                    cout << "Invalid argument" << endl;
+                    break;
                 case 98:
                     cout << "Address already in use" << endl;
                     break;
@@ -128,7 +131,7 @@ void errorSwitch(int error) {
     #endif
 }
 
-//For listenForServerOutput thread [clientSide]
+//For thread status
 atomic<bool> threadStatus;
 
 void listenForServerOutput(int socket, fd_set read_set) {
@@ -181,9 +184,16 @@ void listenForServerOutput(int socket, fd_set read_set) {
                     threadStatus = false;
                 }
 
-                //Jei tai serverio issiusta zinute tikrinimui
                 if(r_len > 0) {
-                    if(buffer[0] != '[' && buffer[1] != ']'){
+                    //Jei tai serverio issiusta zinute tikrinimui ar dar prisijunges klientas
+                    if(buffer[0] == '[' && buffer[1] == ']') {
+
+                    } else if(buffer[0] == '{' && buffer[1] == '}') {
+                        //Jei serveris issiuncia isjungimo signala
+                        cout << "Server has shutdown!" << endl;
+                        threadStatus = false;
+                        exit(1);
+                    } else {
                         cout << buffer << endl;
                     }
                 }
@@ -510,9 +520,22 @@ int serverSide() {
             return 1;
         }
 
+        //Jei nurodoma isjungti serveri
         if(threadStatus == false) {
             cout << "Stopping server..." << endl;
 
+            //Issiunciamos uzdarymo zinutes
+            char hg[3];
+            hg[0] = '{';
+            hg[1] = '}';
+
+            for(int a = 0; a < MAXCLIENTS; a++) {
+                if(clients[a].socket != -1) {
+                    send(clients[a].socket, hg, 3, 0);
+                }
+            }
+
+            //Uzdaromi sockets
             #if defined(WIN32) || defined(_WIN32)
 
             for(int a = 0; a < MAXCLIENTS; a++) {
@@ -552,7 +575,7 @@ int serverSide() {
                 }
             }
 
-            int asdf = close(l_socket;)
+            int asdf = close(l_socket);
 
             if(asdf != 0) {
                 errorSwitch(errno);
@@ -686,34 +709,27 @@ int serverSide() {
 
             if(clients[a].socket != -1) {
                 int st = send(clients[a].socket, hg, 3, 0);
-
-                if(st == 0) {
+                
+                if(st < 0) {
                     cout << clients[a].name << " has disconnected!" << endl;
+                    
                     #if defined(WIN32) || defined(_WIN32)
                     int st = closesocket(clients[a].socket);
 
-                    /*
-                    int gf = WSACleanup();
-
-                    if(gf != 0) {
-                        errorSwitch(WSAGetLastError());
-                    }
-                    */
                     #else
                     int st = close(clients[a].socket);
                     #endif
 
+                    clients[a].socket = -1;
+
                     if(st < 0) {
-                        #if defined(WIN32) || defined(_WIN32)
+                        #if defined (WIN32) || defined(_WIN32)
                         errorSwitch(WSAGetLastError());
                         #else
-                        errorSwitch(st);
+                        errorSwitch(errno);
                         #endif
+                        return 1;
                     }
-                    clients[a].socket = -1;
-                } else if(st < 0) {
-                    errorSwitch(errno);
-                    return 1;
                 }
             }
         }
