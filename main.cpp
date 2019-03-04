@@ -1,5 +1,5 @@
-//1.6
-#if defined(WIN32)
+//1.7
+#if defined(WIN32) || defined(_WIN32)
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Wsock32.lib")
 #else
@@ -188,6 +188,20 @@ void listenForServerOutput(int socket, fd_set read_set) {
                     }
                 }
             }
+        }
+    }
+}
+
+void listeningForServerSideInput() {
+
+    string command;
+
+    while(threadStatus) {
+        cin >> command;
+
+        if(command == "/leave" || command == "/q") {
+            threadStatus = false;
+            break;
         }
     }
 }
@@ -451,8 +465,15 @@ int serverSide() {
         clients[i].socket = -1;
     }
 
+    //Listening for input
+    threadStatus = true;
+
+    thread listeningForInput(listeningForServerSideInput);
+
+    cout << "Server port: " << port << endl;
     cout << "Waiting for connections..." << endl;
 
+    //Setting all client sockets to -1
     int sockets[MAXCLIENTS];
     for(int a = 0; a < MAXCLIENTS; a++) {
         clients[a].socket = -1;
@@ -487,6 +508,60 @@ int serverSide() {
         if(rr < 0) {
             errorSwitch(errno);
             return 1;
+        }
+
+        if(threadStatus == false) {
+            cout << "Stopping server..." << endl;
+
+            #if defined(WIN32) || defined(_WIN32)
+
+            for(int a = 0; a < MAXCLIENTS; a++) {
+                if(clients[a].socket != -1) {
+                    int dsf = closesocket(clientSide());
+
+                    clients[a].socket = -1;
+
+                    if(dsf != 0) {
+                        errorSwitch(WSAGetLastError());
+                    }
+                }
+            }
+
+            int dsf = closesocket(l_socket);
+
+            if(dsf != 0) {
+                errorSwitch(WSAGetLastError());
+            }
+
+            int gf = WSACleanup();
+
+            if(gf != 0) {
+                errorSwitch(WSAGetLastError());
+            }
+
+            #else
+            for(int a = 0; a < MAXCLIENTS; a++) {
+                if(clients[a].socket != -1) {
+                    int asdg = close(clients[a].socket);
+
+                    clients[a].socket = -1;
+
+                    if(asdg != 0) {
+                        errorSwitch(errno);
+                    }
+                }
+            }
+
+            int asdf = close(l_socket;)
+
+            if(asdf != 0) {
+                errorSwitch(errno);
+            }
+
+            #endif
+
+            listeningForInput.join();
+            return 0;
         }
 
         if (FD_ISSET(l_socket, &read_set)){
