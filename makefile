@@ -1,2 +1,2 @@
 makefile: main.cpp
-	g++ main.cpp -lpthread -o test
+	g++ main.cpp -lpthread -o app
