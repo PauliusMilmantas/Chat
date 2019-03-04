@@ -1,4 +1,4 @@
-//1.8
+//1.9
 #if defined(WIN32) || defined(_WIN32)
 #pragma comment(lib, "Ws2_32.lib")
 #pragma comment(lib, "Wsock32.lib")
@@ -35,6 +35,7 @@ using namespace std;
 #define MAXCLIENTS 32
 
 #if defined(WIN32)
+//Funkcija skirta padeti isvalyti ekrana, nustatant kursoriaus pozicija
 void pos(short C, short R)
 {
     COORD xy ;
@@ -44,6 +45,8 @@ void pos(short C, short R)
     GetStdHandle(STD_OUTPUT_HANDLE), xy);
 }
 #endif
+
+//Ekrano isvalymo funkcija
 void cls( )
 {
     #if defined(WIN32) || defined(_WIN32)
@@ -56,9 +59,9 @@ void cls( )
     #endif
 }
 
-
 void errorSwitch(int error) {
     #if defined(WIN32) || defined(_WIN32)
+    //WSAGetLastError() - klaidos kodas
     if(error != 0) {
         switch(error) {
             case 10091:
@@ -103,6 +106,7 @@ void errorSwitch(int error) {
         }
     }
     #else
+        //errno - klaidos kodas
         if(error != 0) {
             switch(error) {
                 case 13:
@@ -134,6 +138,7 @@ void errorSwitch(int error) {
 //For thread status
 atomic<bool> threadStatus;
 
+//Klientas klausosi serverio siunciamu pranesimu ir juos apdoroja
 void listenForServerOutput(int socket, fd_set read_set) {
 
     int maxfd = 0;
@@ -202,14 +207,15 @@ void listenForServerOutput(int socket, fd_set read_set) {
     }
 }
 
+//Klausomasi naudotojo nurodymu serveriui kontroliuoti
 void listeningForServerSideInput() {
-
     string command;
 
     while(threadStatus) {
         cin >> command;
 
         if(command == "/leave" || command == "/q") {
+            //Threadstatus veliau naudojamas patikrinimui ar reikia sustabdyti programa
             threadStatus = false;
             break;
         }
@@ -217,7 +223,7 @@ void listeningForServerSideInput() {
 }
 
 int clientSide() {
-    int s_socket;
+    int s_socket; //Serverio socket
     struct sockaddr_in servaddr; // Serverio adreso strukt�ra
     fd_set read_set;
 
@@ -227,7 +233,7 @@ int clientSide() {
     char sendbuffer[BUFFLEN];
     char server_ip[16];
 
-    cls();
+    cls();  //Ekrano isvalymas
 
     #if defined(WIN32) || defined(_WIN32)
     int iResult;
@@ -236,16 +242,21 @@ int clientSide() {
     WSADATA wsaData;
 
     // Initialize Winsock
+    //1 arg - WORD wVersionRequired
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    if (iResult != 0) {
+    if (iResult != 0) { //Jei ivyko klaida
         errorSwitch(iResult);
 
         return 1;
     }
     #endif
 
+    //1 arg - Socket family
+    //AF_INET = The Internet Protocol version 4 (IPv4) address family. 
+    //2 arg - SOCK_STREAM = dvipusis rysys
+    //3 arg - 0 = nenurodomas protokolas, jis parenkamas automatiskai
     s_socket = socket(AF_INET, SOCK_STREAM,0);
-    if (s_socket< 0){
+    if (s_socket< 0){ //Klaida kuriant socket
             #if defined(WIN32) || defined(_WIN32)
             int error = WSAGetLastError();
             #else
@@ -276,15 +287,16 @@ int clientSide() {
 
     memset(&servaddr,0,sizeof(servaddr));
     servaddr.sin_family = AF_INET; // nurodomas protokolas (IP)
-    servaddr.sin_addr.s_addr = inet_addr(server_ip);
+    servaddr.sin_addr.s_addr = inet_addr(server_ip);    //Konvertuoja is ip4 i bin formata
     servaddr.sin_port = htons(s_port); // nurodomas portas
     unsigned long ulAddr = INADDR_NONE;
     ulAddr = inet_addr(server_ip);
 
     if (ulAddr == INADDR_NONE ) {
-        printf("inet_addr failed and returned INADDR_NONE\n");
+        cout << "Invalid ip address" << endl;
         #if defined(WIN32) || defined(_WIN32)
 
+        //Isjungiamas socket dll naudojimas
         int gf = WSACleanup();
 
         if(gf != 0) {
@@ -320,7 +332,7 @@ int clientSide() {
         exit(1);
     }
 
-    //Klausomasi serverio nurodymu
+    //Klausomasi serverio nurodymu su thread
     threadStatus = true;
 
     thread listeningForServer(listenForServerOutput, s_socket, read_set);
@@ -336,6 +348,7 @@ int clientSide() {
             int s_len = send(s_socket, cstr, strlen(cstr), 0);
             delete [] cstr;
 
+            //Jei ivyko klaida siunciant
             if(s_len < 0) {
                 #if defined(WIN32) || defined(_WIN32)
                 int error = WSAGetLastError();
@@ -348,7 +361,7 @@ int clientSide() {
                 listeningForServer.join();
                 done = true;
             }
-        } else {
+        } else { //Jeigu tai yra isjungimo komanda
             done = true;
             threadStatus = false;
 
@@ -358,7 +371,7 @@ int clientSide() {
 
             int st = send(s_socket, tt, strlen(tt), 0);
 
-            listeningForServer.join();
+            listeningForServer.join(); //Isjungiamas thread
         }
     }
 
@@ -407,7 +420,7 @@ int serverSide() {
         int socket;
     };
 
-    cls();
+    cls();  //Isvalomas ekranas
 
     cout << "Enter server port: ";
     int port;
@@ -440,7 +453,7 @@ int serverSide() {
 
     WSADATA wsaData;
 
-    // Initialize Winsock
+    // Inicijuojami windows socket biblioteka
     iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
     if (iResult != 0) {
         printf("WSAStartup failed: %d\n", iResult);
@@ -489,7 +502,7 @@ int serverSide() {
         clients[a].socket = -1;
     }
 
-    int usersConnectedInTotal = 0;
+    int usersConnectedInTotal = 0;  //Naudojamas naudotoju vardu generacijai
     string outputf;
     while(true){
         FD_ZERO(&read_set);
@@ -507,6 +520,7 @@ int serverSide() {
             maxfd = l_socket;
         }
 
+        //Padaroma, kad kas 2 sekundes selectas praleistu programa
         #if defined(WIN32) || defined(_WIN32)
         static TIMEVAL tv;
         #else
