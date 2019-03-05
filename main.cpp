@@ -135,6 +135,57 @@ void errorSwitch(int error) {
     #endif
 }
 
+void mySend(int socket, char* buffer) {
+    int ilgis = strlen(buffer);
+    int ll = 0;
+    int postumis = 0;
+
+    int lastSend = ll;
+    while(ll < ilgis) {
+        *(buffer + ll);
+        postumis = send(socket, buffer, BUFFLEN-ll, 0);
+        ll += postumis;
+
+        if(postumis < 0) {
+            #if defined(WIN32)
+            errorSwitch(WSAGetLastError());
+            #else
+            errorSwitch(errno);
+            #endif
+        }
+    }
+
+    *(buffer - ll);
+}
+
+int myRecv(int socket, char &buffer) {
+
+    char* tt = &buffer;
+    int ilgis = 0;
+    int postumis = 0;
+
+    while(ilgis < BUFFLEN) {
+        buffer = *tt;
+        (buffer + ilgis);
+
+        postumis += recv(socket, &buffer,BUFFLEN-ilgis,0);
+        ilgis += postumis;
+
+        if(postumis < 0) {
+            #if defined(WIN32)
+            errorSwitch(WSAGetLastError());
+            #else
+            errorSwitch(errno);
+            #endif // defined
+        }
+    }
+
+    buffer - ilgis;
+
+    return ilgis;
+}
+
+
 //For thread status
 atomic<bool> threadStatus;
 
@@ -174,7 +225,8 @@ void listenForServerOutput(int socket, fd_set read_set) {
             //Returns a non-zero value if the bit for the file descriptor (socket) is set in the file descriptor set pointed to by read_set, and 0 otherwise.
             if (FD_ISSET(socket, &read_set)){
                 memset(&buffer,0,BUFFLEN);
-                int r_len = recv(socket,(char*) &buffer,BUFFLEN,0);
+                //int r_len = recv(socket,(char*) &buffer,BUFFLEN,0);
+                int r_len = myRecv(socket, *buffer);
 
                 //Tikrinama ar ivyko klaida
                 if(r_len < 0) {
@@ -252,7 +304,7 @@ int clientSide() {
     #endif
 
     //1 arg - Socket family
-    //AF_INET = The Internet Protocol version 4 (IPv4) address family. 
+    //AF_INET = The Internet Protocol version 4 (IPv4) address family.
     //2 arg - SOCK_STREAM = dvipusis rysys
     //3 arg - 0 = nenurodomas protokolas, jis parenkamas automatiskai
     s_socket = socket(AF_INET, SOCK_STREAM,0);
@@ -345,22 +397,9 @@ int clientSide() {
         if(command != "/leave" && command != "/quit" && command != "/q") {
             char *cstr = new char[command.length() + 1];
             strcpy(cstr, command.c_str());
-            int s_len = send(s_socket, cstr, strlen(cstr), 0);
+            mySend(s_socket, cstr);
             delete [] cstr;
 
-            //Jei ivyko klaida siunciant
-            if(s_len < 0) {
-                #if defined(WIN32) || defined(_WIN32)
-                int error = WSAGetLastError();
-                #else
-                int error = errno;
-                #endif
-                errorSwitch(error);
-
-                threadStatus = false;
-                listeningForServer.join();
-                done = true;
-            }
         } else { //Jeigu tai yra isjungimo komanda
             done = true;
             threadStatus = false;
@@ -369,8 +408,8 @@ int clientSide() {
             char *tt = new char[yy.length() + 1];
             strcpy(tt, yy.c_str());
 
-            int st = send(s_socket, tt, strlen(tt), 0);
-
+            //int st = send(s_socket, tt, strlen(tt), 0);
+            mySend(s_socket, tt);
             listeningForServer.join(); //Isjungiamas thread
         }
     }
@@ -478,6 +517,7 @@ int serverSide() {
         return -1;
     }
 
+    //2 arg - max eile laukianciu connection
     if (listen(l_socket, 5) <0){
         errorSwitch(errno);
 
@@ -545,7 +585,7 @@ int serverSide() {
 
             for(int a = 0; a < MAXCLIENTS; a++) {
                 if(clients[a].socket != -1) {
-                    send(clients[a].socket, hg, 3, 0);
+                    mySend(clients[a].socket, hg);
                 }
             }
 
@@ -613,6 +653,11 @@ int serverSide() {
                 #if defined(WIN32) || defined(_WIN32)
                 clients[client_id].socket = accept(l_socket,
                     (struct sockaddr*)&clientaddr, (int*)&clientaddrlen);
+
+                if(clients[client_id].socket <= 0) {
+                    errorSwitch(WSAGetLastError());
+                    exit(1);
+                }
                 #else
                 clients[client_id].socket = accept(l_socket,
                     (struct sockaddr*)&clientaddr, &clientaddrlen);
@@ -630,12 +675,7 @@ int serverSide() {
                 strcpy(buffer, msg.c_str());
                 for(int b = 0; b < MAXCLIENTS; b++) {
                     if(clients[b].socket != -1) {
-                        int yy = send(clients[b].socket, buffer, BUFFLEN, 0);
-
-                        if(yy < 0) {
-                            errorSwitch(errno);
-                            return 1;
-                        }
+                        mySend(clients[b].socket, buffer);
                     }
                 }
             }
@@ -645,7 +685,8 @@ int serverSide() {
             if (clients[i].socket != -1){
                 if (FD_ISSET(clients[i].socket, &read_set)){
                     memset(&buffer,0,BUFFLEN);
-                    int r_len = recv(clients[i].socket,(char*) &buffer,BUFFLEN,0);
+                    //int r_len = recv(clients[i].socket,(char*) &buffer,BUFFLEN,0);
+                    int r_len = myRecv(clients[i].socket, *buffer);
 
                     string msg = string(buffer);
                     if(r_len > 0) {
@@ -680,12 +721,7 @@ int serverSide() {
 
                             for(int a = 0; a < MAXCLIENTS; a++) {
                                 if(clients[a].socket != -1 && a != i) {
-                                    int yy = send(clients[a].socket, buffer, BUFFLEN, 0);
-
-                                    if(yy < 0) {
-                                        errorSwitch(errno);
-                                        return 1;
-                                    }
+                                    mySend(clients[a].socket, buffer);
                                 }
                             }
                         } else if(msg.substr(0, 5) == "/name") {
@@ -699,12 +735,7 @@ int serverSide() {
 
                             for(int a = 0; a < MAXCLIENTS; a++) {
                                 if(clients[a].socket != -1 && a != i) {
-                                    int yy = send(clients[a].socket, buffer, BUFFLEN, 0);
-
-                                    if(yy < 0) {
-                                        errorSwitch(yy);
-                                        return 1;
-                                    }
+                                    mySend(clients[a].socket, buffer);
                                 }
                             }
                         }
@@ -723,10 +754,10 @@ int serverSide() {
 
             if(clients[a].socket != -1) {
                 int st = send(clients[a].socket, hg, 3, 0);
-                
+
                 if(st < 0) {
                     cout << clients[a].name << " has disconnected!" << endl;
-                    
+
                     #if defined(WIN32) || defined(_WIN32)
                     int st = closesocket(clients[a].socket);
 
